@@ -6,13 +6,19 @@ The MOS Technology 6502 (typically "sixty-five-oh-two" or "six-five-oh-two") is 
 
 [65xx family tree](65xx.md)
 
-| Year        | Model             | Manufacturer   |
-| -----------:| ----------------- | -------------- |
-| 1975 | [6502](6502.md) | MOS Technology |
-| | [65C02](65C02.md) |                | [Apple //c](/computer/apple/apple2c.md) |
-|             | [65816](65816.md) | Western Design Center | [Apple IIgs](/computer/apple/appleIIgs.md) |
+| Model             | Extends    | Manufacturer   |
+| ----------------- | ---------- | -------------- |
+| [6502](6502.md)   |            | MOS Technology |
+| [65C02](65C02.md) | 6502       | Western Design Center |
+| [65816](65816.md) | 65C02      | Western Design Center |
 
 
 ### [6502](6502.md)
  * [Apple I](/computer/apple/appleI.md)
  * [Apple \]\[](/computer/apple/appleII.md)
+
+### [65C02](65C02.md)
+  * [Apple //c](/computer/apple/apple2c.md)
+
+### [65816](65816.md)
+  * [Apple IIgs](/computer/apple/appleIIgs.md)
