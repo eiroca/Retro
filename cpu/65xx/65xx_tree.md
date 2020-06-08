@@ -14,10 +14,14 @@ The MOS Technology 6502 (typically "sixty-five-oh-two" or "six-five-oh-two") is 
 
 
 ### [6502](6502.md)
- * [Apple I](/computer/apple/appleI.md)
- * [Apple \]\[](/computer/apple/appleII.md)
+  * [Apple I](/computer/apple/appleI.md)
+  * [Apple \]\[](/computer/apple/appleII.md)
+  * [Apple \]\[+](/computer/apple/appleII+.md)
+  * [Apple \]\[e](/computer/apple/appleIIe.md)
+  * [Apple ///](/computer/apple/appleIII.md)
 
 ### [65C02](65C02.md)
+  * [Apple //e+](/computer/apple/apple2e+.md)
   * [Apple //c](/computer/apple/apple2c.md)
 
 ### [65816](65816.md)
