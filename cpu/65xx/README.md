@@ -2,11 +2,14 @@
 
 The MOS Technology 6502 (typically "sixty-five-oh-two" or "six-five-oh-two") is an 8-bit microprocessor that was designed by a small team led by Chuck Peddle for MOS Technology in 1975.
 
-[Wikipedia link](https://en.wikipedia.org/wiki/MOS_Technology_6502)
 
-[65xx family tree](65xx_tree.md)
-[Extra Instructions Of The 65XX Series CPU](6502_extra.md)
+* [Wikipedia link](https://en.wikipedia.org/wiki/MOS_Technology_6502)
 
-[65816](65816.md)
 
-[65020 Concept](65020.md)
+* [65xx family tree](65xx_tree.md)
+* [Extra instructions of the 65XX series CPU](6502_extra.md)
+* [65816](65816.md)
+
+Concepts:
+* [65020](concept/65020.md)
+* [6502ex](concept/6502ex.md)
