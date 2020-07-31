@@ -20,7 +20,7 @@ GitHub cores:
 * [CoPro6502](https://github.com/hoglet67/CoPro6502/tree/master/src/Arlet) a Verilog HDL version of the old MOS 6502 and 65C02 CPUs.
 * [HuC6280](https://github.com/fseidel/HuC6280) Verilog HDL model of the Hudson Soft HuC6280 CPU.
 
-Other:
+Other cores:
 * [Verilog 6502](http://www.aholme.co.uk/6502/Main.htm) phase-accurate core built from the visual6502 transistor-level netlist.
 * [bc6502](http://finitron.ca/Projects/Prj6502/bc6502_page.html) Verilog source code for a fully functional 6502 compatible cpu core.
 * [Free-6502](http://web.archive.org/web/20040603222048/http:/www.free-ip.com/6502/index.html) is a 6502 compatible CPU core.
@@ -28,11 +28,10 @@ Other:
 * [6502 Core](http://www.sprow.co.uk/dump/index.htm#Free6502) based on Free-6502 (VHDL).
 * [Pet2001](https://github.com/skibo/Pet2001_Nexys3) A Commodore PET in an FPGA.
 
-Extended version:
+Extended 65xx cores:
 * [RTF65002](https://opencores.org/projects/rtf65002) Verylog core
 * [RTF65003](https://github.com/robfinch/Cores/tree/master/rtf65003/trunk)
 * [RTF65004](https://github.com/robfinch/Cores/tree/master/rtf65004)
-
 * [af65k](https://github.com/fachat/af65k)  implementation of the 65k processor core, a 6502 blown up to 64bit
 
 Resources:

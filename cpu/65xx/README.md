@@ -9,7 +9,7 @@ The MOS Technology 6502 (typically "sixty-five-oh-two" or "six-five-oh-two") is 
 * [65xx family tree](65xx_tree.md)
 * [Extra instructions of the 65XX series CPU](6502_extra.md)
 * [65816](65816.md)
-* [CPU cores](cores.md):
+* [CPU cores](cores.md)
 
 Concepts / evolutions:
 * [65020](concept/65020.md)
