@@ -11,7 +11,7 @@ Copyright by MIPI - 1983
 
 ### Installation
 In order to have KEN-DOS working it is necessary to connect two points on the main PCB by means of the wire provided with the KEN-DOS system-package. 
-Pin 49 of the X bus has to be connected with pin 8 of the DCE-bus, thus routing the hold-line to the DCE-bus.
+Pin 49 of the X-bus has to be connected with pin 8 of the DCE-bus, thus routing the hold-line to the DCE-bus.
 This hold-line enables handshaking. 
 Without this modification it would be impossible for KEN-DOS to work in double-density mode.
 
@@ -173,7 +173,7 @@ Addresses in hex.
 | `#B350` | bottom of screen (mode-0) |
 | `#C000` | start BASIC ROM's |
 | `#F000` | start KEN-DOS |
-| `##F800`| start DAI stack |
+| `#F800` | start DAI stack |
 | `#F900` | start KEN-DOS heap/bank select address |
 | `#FA50` | start KEN-DOS bank-switch routine |
 | `#FB00` | |
