@@ -4,4 +4,4 @@
 
 CPU: Intel 8080 2MHz
 
-[Memory Map](Memory Map.md)
+[Memory Map](MemoryMap.md)
