@@ -2,4 +2,4 @@
 Information about retrocomputing
 
 - [CPU & microcontroller](cpu)
-- [8bit era computer](computer 8bit)
+- [8bit era computer](computer_8bit)
