@@ -12,8 +12,32 @@ CPU: Intel 8080 2MHz
 | `C000-DFFF` | ROM (non-switchable) |
 | `E000-EFFF` | ROM (4 switchable banks) |
 | `F000-F7FF` | ROM extension (optional) |
-| `F800-F8FF` | DAI stack |
+| `F800-F8FF` | CPU Stack |
 | `F900-FFFF` | I/O |
+
+### FIRMWARE MODULES
+
+| Memory Address  | Description |
+|-----------------|-------------|
+| ` C000 -  C6BF` | Math. utilities |
+| ` C6C0 -  C718` | Bank Switching |
+| ` C719 -  D100` | BASIC handler |
+| ` D101 -  D194` | string handler |
+| ` D195 -  D23C` | Heap handler |
+| ` D23D -  D8FA` | I/O handler |
+| ` D8FB -  D9F4` | Interrupt handler |
+| ` D9F5 -  DAD3` | Error handler |
+| ` DAD4 -  DDD0` | Print routines |
+| ` DDD1 -  DE01` | Encoding service routines |
+| ` DE02 -  DEB4` | Single/double byte utilities |
+| ` DEB5 - 0ECAA` | BASIC execution/run-time module |
+| `0ECAB - 0EFFF` | List handler |
+| `1E000 - 1EE6D` | Math. package |
+| `1EE6E - 1EFFF` | Sound module |
+| `2E000 - 2EBF3` | Screen driving package |
+| `2EBF4 - 2EFFF` | Editor package |
+| `3E000 - 3E9FF` | Encoding package |
+| `3EA00 - 3EFFF` | Utility package |
 
 ### RAM
 
