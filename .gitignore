@@ -3,3 +3,6 @@
 *.sbin
 **/0lder
 **/desktop.ini
+computer_8bit/DAI/SW/firmware/*.bin
+computer_8bit/DAI/SW/firmware/ROMS/*.bin
+computer_8bit/DAI/SW/firmware/SymbolTable

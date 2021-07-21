@@ -76,7 +76,7 @@ I3USA	.EQU	$0068	; W Vector address RST 3: sound interrupt
 I4USA	.EQU	$006A	; W Vector address RST 4: math. restart
 I5USA	.EQU	$006C	; W Vector address RST 5: screen restart
 I6USA	.EQU	$006E	; W Vector address RST 6: keyb. int. serv
-I7USA	.EQU	$0070	; W Vector address RST 71 clock interrupt
+I7USA	.EQU	$0070	; W Vector address RST 7: clock interrupt
 ;
 .segment "RAM - Screen Variables"
 CURSOR	.EQU	$0072	; W Cursor position address

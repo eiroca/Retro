@@ -1,11 +1,12 @@
 ;
 ;
 ;
+;
 ; DAI FIRMWARE
 ;
 .target	"8080"
 .format	"bin"
-.setting	"OutputSaveIndividualSegments", false
+.setting	"OutputSaveIndividualSegments", true
 ;
 ;ROMVERS	.equ	10	; 11 = BASIC v1.0
 ROMVERS	.equ	11	; 11 = BASIC v1.1
@@ -13,12 +14,12 @@ ROMVERS	.equ	11	; 11 = BASIC v1.1
 .include	"DAI FW macro.8080.asm"
 .include	"DAI FW RAM.8080.asm"
 ;
-; ROM Bank 0 - 12KB starting $C000
+; ROM Core - 8KB starting $C000 (not banked)
 .bank 0, 12, $C000
-.segment "ROM0", 0
+.segment "ROM", 0
 .org	$C000
 ;
-bgn_rom0	.equ	*
+bgn_rom	.equ	*
 ;
 ;     ===============
 ; *** MATH. UTILITIES ***
@@ -838,7 +839,7 @@ LC32D	DCR	C
 ;        CY=0, Z=1: Char is +/—.
 ;        CY=0, Z=0:	otherwise.
 ;
-LC32F	CALL	LC073	; Get char from 1ine
+LC32F	CALL	LC073	; Get char from line
 	INR	C	; Update pointer
 	CPI	'+'	; $2B
 	RZ		; Abort if '+'
@@ -1296,7 +1297,7 @@ ICB	STC
 	PUSH	D
 	PUSH	H
 	CALL	LC598	; Clear MACC and FPTWRK
-@C57A	CALL	LC073	; Get digit from 1ine
+@C57A	CALL	LC073	; Get digit from line
 	SUI	$30	; Convert ASCII to binary
 	JC	LC590	;
 	CPI	$0A	; Abort if no number
@@ -1449,7 +1450,7 @@ HCB	STC
 	PUSH	D
 	PUSH	H
 	CALL	LC598	; Clear MACC and FPTWRK
-@C61B	CALL	LC073	; Get digit from 1ine
+@C61B	CALL	LC073	; Get digit from line
 	SUI	'0'
 	JC	LC590
 	CPI	$0A	; Check if hex number
@@ -1652,7 +1653,7 @@ MRSIO	XTHL
 	STA	POROM	; Update memory
 	STA	PORO	; Update port
 	MVI	H, $E0
-	CALL	MRDCL	; Restore HL, PSH; Switch bank
+	CALL	MRDCL	; Restore HL, PSW; Switch bank
 ;
 ; Return from switched bank:
 LC6E6	XTHL		; Return to old bank
@@ -1737,7 +1738,7 @@ RESET	LXI	SP, $F900	; Init. stack pointer
 ; Init. math package:
 ;
 	LXI	D, $C7F2	; Addr table error vectors
-	LXI	H, $DDE0	; Addr routine get char/1ine
+	LXI	H, $DDE0	; Addr routine get char/line
 	CALL	XINIT	; Package initialisation
 ;
 ; Init screen RAM:
@@ -1760,15 +1761,15 @@ RESET	LXI	SP, $F900	; Init. stack pointer
 	CALL_W(PMSGR, MSGHDR)	; Print 'DAI PERSONAL COMPUTER'
 	LHLD	SCRBOT	; Get bottom screen RAM
 	LXI	D, $097B
-	DAD	D	; Get 1ine mode byte of 1ine with 'DAI PC'
+	DAD	D	; Get line mode byte of line with 'DAI PC'
 	MVI	M, $5F	; Set for medium resolution
 	LXI	D, $FFD0
-	DAD	D	; Create new 1ine mode byte for 1ine with COMPUTER
-	CALL	LCEF9	; Place 'COMPUTER' on new 1ine
-	MVI	D, $0F	; Nr of blanking 1ines
-@C768	CALL	LCECF	; Blank next 15 1ines
+	DAD	D	; Create new line mode byte for line with COMPUTER
+	CALL	LCEF9	; Place 'COMPUTER' on new line
+	MVI	D, $0F	; Nr of blanking lines
+@C768	CALL	LCECF	; Blank next 15 lines
 	DCR	D
-	JNZ	@C768	; Next 1ine
+	JNZ	@C768	; Next line
 ;
 ; Prepare BASIC:
 ;
@@ -1793,7 +1794,7 @@ RESET	LXI	SP, $F900	; Init. stack pointer
 	STA	SCB2+6	; Volume SCB2 = 0
 	STA	IMPTYP
 	LXI	D, IMPTAB
-	LXI	H, IMPTYP
+	LXI	H, IMPTAB+26
 	CALL	FILL
 	EI
 	ROMCALL(1, $15)
@@ -1896,7 +1897,7 @@ START	XRA	A
 	STA	EFSW	; Input from keyb/DINC
 ;
 ;
-; Entry on reset, after encoding program 1ine after END:
+; Entry on reset, after encoding program line after END:
 ;
 LC818	LXI	H, $F900
 	SHLD	v_STACK	; Reset current base stack
@@ -1920,11 +1921,11 @@ LC823	LHLD	v_STACK	; Get saved stack pointeer
  .endif
 .if ROMVERS == 10
 	LXI	H, $0000
-	SHLD	CURRNT	; Reset current 1ine nr
+	SHLD	CURRNT	; Reset current line nr
 	SHLD	LOPVAR	; No running 1oops
 	SHLD	STKGOS	; No active subroutine cal1
 	MOV	A, H
-	STA	ERSFL	; No encoding of stored 1ine
+	STA	ERSFL	; No encoding of stored line
 	NOP
 	NOP
 	NOP
@@ -1944,15 +1945,15 @@ LC823	LHLD	v_STACK	; Get saved stack pointeer
 			; until Break or car. ret (If no input is given,
 			; the DAI remains here in a endless 1oop).
 	JC	@C846	; If BREAK: new inputs
-	CALL	IGNB	; Get char from 1ine, neglect TAB and space
+	CALL	IGNB	; Get char from line, neglect TAB and space
 	CPI	$0D
 	JZ	@C846	; If car.ret: new inputs
 	CALL	NUMBER	; Check if char is number
 	JNC	@C86D	; If no leading nr: encode cmd
 ;
-; Encode program 1ine (if 1st char is number)
+; Encode program line (if 1st char is number)
 ;
-@C867	CALL	PROGI	; Encode program 1ine update program
+@C867	CALL	PROGI	; Encode program line update program
 	JMP	LC818	; Get next input lines ki11 any suspended program
 ;
 ; Encode direct command (if 1st char is no number)
@@ -2005,7 +2006,7 @@ LC89F	CALL	KLIRP	; Keyb pntrs to default
 .if ROMVERS == 10
 	LDA	KBRFL
 	ORA	A	; BREAK flag set?
-	JZ	LC87F	; Run Basic 1ine if not
+	JZ	LC87F	; Run Basic line if not
 	NOP
 	NOP
 	NOP
@@ -2014,7 +2015,7 @@ LC89F	CALL	KLIRP	; Keyb pntrs to default
 .endif
 	JMP	LC8C0	; Handle break
 ;
-; Run a BASIC 1ine
+; Run a BASIC line
 ;
 DCALL	PCHL		; Addr Basic routine in PC
 ;
@@ -2062,10 +2063,10 @@ LC8CB	LXI	H, $FFEB	; Frame length
 ;
 ; Length byte or end flag
 ;
-LC8E5	JZ	LC823	; If end immediate cmd 1ine or end program
+LC8E5	JZ	LC823	; If end immediate cmd line or end program
 	MOV	H, B
 	MOV	L, C
-	SHLD	SYSBOT	; Store start current 1ine
+	SHLD	SYSBOT	; Store start current line
 	LHLD	STRFL	; Get trace + step flag
 	MOV	A, H
 	ORA	L
@@ -2075,19 +2076,19 @@ LC8E5	JZ	LC823	; If end immediate cmd 1ine or end program
 ;
 	PUSH	H
 	PUSH	B
-	CALL	LCEA4	; List current 1ine
+	CALL	LCEA4	; List current line
 	POP	B
 	POP	PSW	; Get step flag
 	ORA	A	; If set:
 	CNZ	WSPACE	; Wait for spacebar pressed
 @C900	INX	B
-	INX	B	; Pnts after 1ine nr
+	INX	B	; Pnts after line nr
 	JC	LC8CB	; If Break
-	JMP	LC87F	; Run next BASIC 1ine
+	JMP	LC87F	; Run next BASIC line
 ;
 ; Special action after LOAD
 ;
-LC908	LHLD	CURRNT	; Get start current 1ine
+LC908	LHLD	CURRNT	; Get start current line
 	MOV	A, H
 	ORA	L	; Direct Cmd?
 	JZ	LC87F	; Then run Basic line
@@ -2097,27 +2098,27 @@ LC908	LHLD	CURRNT	; Get start current 1ine
 ;
 ; PROGRAM INPUT
 ;
-; Encodes a program 1ine and updates the stored program.
+; Encodes a program line and updates the stored program.
 ;
 ; Entry: C: Input count / offset
 ; Exit:  C: Offset after line
 ;        AFBDEHL preserved
 ;
 PROGI	LXI	H, EBUF+1	; Addr buf for encoded cmds
-	ROMCALL(1, $03)	; Get 1ine nr
-	CALL	IGNB	; Get char from 1ine; neglect TAB + space
+	ROMCALL(1, $03)	; Get line nr
+	CALL	IGNB	; Get char from line; neglect TAB + space
 	CPI	$0D	; Car.ret?
-	CZ	LDEL	; Delete old version if only 1ine nr given
-	JZ	@C93B	; Jump if 1ine nr only
-	PUSH	D	; Remember 1ine nr
+	CZ	LDEL	; Delete old version if only line nr given
+	JZ	@C93B	; Jump if line nr only
+	PUSH	D	; Remember line nr
 	MVI	D, $40	; Mask for 'stored cmd'
 	CALL	ELINA	; Encode a line
 	MOV	A, L
 	SUI	$3F	; Length string in A
 	STA	EBUF	; Length in EBUF
-	POP	D	; Get 1ine nr
+	POP	D	; Get line nr
 	CALL	LDEL	; Delete old line
-	CALL	LINS	; Insert new 1ine
+	CALL	LINS	; Insert new line
 @C93B	RET
 ;
 ; ENCODE A LINE
@@ -2136,12 +2137,12 @@ ELINA	PUSH	D
 	POP	H
 	PUSH	H
 	MVI	A, $01
-	STA	ERSFL	; Set encoding a stored 1ine
+	STA	ERSFL	; Set encoding a stored line
 	ROMCALL(1, $00)	; Encode inputs
 	POP	D	; Cancel Push B,H
 	POP	D
 LC951	XRA	A
-	STA	ERSFL	; No encoding stored 1ine
+	STA	ERSFL	; No encoding stored line
 	POP	D
 	RET
 ;
@@ -2149,7 +2150,7 @@ LC951	XRA	A
 ; * ERROR WHILE ENCODING A STORED LINE *
 ; **************************************
 ;
-; Restores stack pointer, adds '***' to begin of 1ine, adds '?' to place of error.
+; Restores stack pointer, adds '***' to begin of line, adds '?' to place of error.
 ; Line is entered into the encoded inputbuffer (EBUF).
 ;
 ; Entry: B: error code.
@@ -2191,7 +2192,7 @@ ELARS	LHLD	ERSSP	; Get ERSSP
 	DCX	B
 	DCX	B	; Pnts to begin EBUF
 	CALL	CRLF	; Print car.ret
-	CALL	SLINE	; (0) List current 1ine
+	CALL	SLINE	; (0) List current line
 	POP	B	; Get error message pntr
 	PUSH	H
 	CALL	ERRMS	; Print error message
@@ -2235,13 +2236,13 @@ LDEL	PUSH	PSW
 	PUSH	B
 	PUSH	H
 	XCHG		; Linenr in HL
-	CALL	FINDL	; Addr 1ine in textbuf in HL
+	CALL	FINDL	; Addr line in textbuf in HL
 	JNC	@C9B8	; Abort if not found
-	MOV	A, M	; Get 1ine length
+	MOV	A, M	; Get line length
 	CMA
 	MOV	E, A	; Compl. value in E
 	MVI	D, $FF
-	CALL	DADM	; HL=HL - 1ine length
+	CALL	DADM	; HL=HL - line length
 	XCHG
 	CALL	PROGM	; Move program buffers
 @C9B8	XCHG
@@ -2389,11 +2390,11 @@ EMSTP	.equ	*
 ; REMARK: Variables, beginning with a reserved string are not allowed.
 ;
 ; Entry: HL: Startaddress table
-;        C:  Position char on current 1ine
+;        C:  Position char on current line
 ;        E:  Number of info bytes - 1
 ; Exit:  If found: CY=1:
 ;          HL: Address in table where string can be found
-;          C:  Position on current 1ine after 1ast char
+;          C:  Position on current line after 1ast char
 ;          A:  Last byte of string typed in.
 ;          D:  0
 ;          BE preserved,
@@ -2404,14 +2405,14 @@ EMSTP	.equ	*
 ;          D:  0
 ;          BE preserved
 ;
-LOOKC	CALL	IGNB	; Get char from 1ine neglect TAB and space
+LOOKC	CALL	IGNB	; Get char from line neglect TAB and space
 @CA37	MOV	D, M	; Get 1ength byte of string
 	INX	H	; Points to 1st stringchar
 	MOV	A, D
 	ORA	A	; Is length zero?
 	RZ		; Then abort
 	PUSH	B	; Save position of 1st char
-@CA3D	CALL	EFETCH	; Get char from 1ine
+@CA3D	CALL	EFETCH	; Get char from line
 	INR	C	; Points to next char on iine
 	CMP	M	; Is it identical to the one in table?
 	INX	H	; Points to next char in table
@@ -2477,7 +2478,7 @@ LOOKX	STC		; CY=1
 	MOV	D, A	; in D
 	PUSH	H	; Save begin table entry
 @CA78	INX	H
-	CALL	EFETCH	; Get char from 1ine
+	CALL	EFETCH	; Get char from line
 	CMP	M	; Compare char of name
 	JNZ	@CA8F	; If not correct namne
 ;
@@ -2523,8 +2524,8 @@ FNAME	PUSH	PSW
 	XCHG		; Reqd addr in DE
 	LHLD	STBBGN	; Get startaddr symtab
 @CA9B	PUSH	H
-	CALL	DADD	; Calx addr next variable
-	CALL	COMP	; Regd variable reached?
+	CALL	DADD	; Calc addr next variable
+	CALL	COMP	; Reqd variable reached?
 	JNC	@CAAA	; Quit if true
 	INX	SP	; Cancel PUSH H
 	INX	SP
@@ -2595,9 +2596,9 @@ LOOKI	PUSH	PSW
 	MOV	A, D	; Get length name
 	ANI	$0F	; Max. 15 bytes
 	MOV	D, A	; Length in D for count
-@CAE7	CALL	EFETCH	; Get char from 1ine
+@CAE7	CALL	EFETCH	; Get char from line
 	MOV	M, A	; Char into symtab
-	INR	C	; Pnts to next char on 1ine
+	INR	C	; Pnts to next char on line
 	INX	H	; Next pos in symtab
 	DCR	D	; Decr 1ength name
 	JNZ	@CAE7	; Next char if not ready
@@ -2611,7 +2612,7 @@ LOOKI	PUSH	PSW
 ; * FIND LINENUMBER IN TEXTBUFFER *
 ; *********************************
 ;
-; Entry: HL: requested 1inenumber
+; Entry: HL: requested linenumber
 ; Exit:  ABCDE preserved. F corrupted.
 ;        CY=1: Linenr found
 ;              HL points to address textline
@@ -2623,7 +2624,7 @@ FINDL	PUSH	B
 	PUSH	PSW
 	PUSH	D
 	MVI	B, $00
-	XCHG		; Req. 1inenr in DE
+	XCHG		; Req. linenr in DE
 	LHLD	TXTBGN	; Get startaddr textbuf
 @CAFF	MOV	C, B	; Length prev. instr in C
 	MVI	B, $00
@@ -2633,12 +2634,12 @@ FINDL	PUSH	B
 	ORA	A
 	INX	H	; Pnts to hibyte linenr
 	JZ	@CB1D	; Abort if at end textbuf
-	MOV	A, D	; Get hibyte reqd 1inenr
+	MOV	A, D	; Get hibyte reqd linenr
 	CMP	M	; Test high order bits
 	JC	@CB1C	; Abort if regd nr 1ower than current one (nr > reqd)
 	JNZ	@CAFF	; Next textline (nr < reqd)
-	INX	H	; Pnts to lobyte 1inenr
-	MOV	A, E	; Get 1obyte reqd 1inenr
+	INX	H	; Pnts to lobyte linenr
+	MOV	A, E	; Get 1obyte reqd linenr
 	CMP	M
 	DCX	H
 	JC	@CB1C	; Abort if reqd nr 1ower than current one (nr > reqd)
@@ -3148,12 +3149,12 @@ FBCP	CALL	XFEC	; Convert FPT nr for output
 ; * LIST CURRENT LINE *
 ; *********************
 ;
-; Lists a program 1ine if trace flag set.
+; Lists a program line if trace flag set.
 ; Part of C8F5
 ;
 LCEA4	DCX	B
 	CALL	COL0	; Cursor to begin next line
-	JMP	SLINE	; (0) List current 1ine
+	JMP	SLINE	; (0) List current line
 ;
 LCEAB	POP	D	; (Not used)
 	RET
@@ -3236,10 +3237,10 @@ HRNEW	LXI	H, SYSBOT
 ; *************************************
 ;
 ; Lines after 'DAI PERSONAL COMPUTER' are set in unit colour mode.
-; Set 1ine mode byte to 7F and first char.
+; Set line mode byte to 7F and first char.
 ; byte to 20, colour 00 during screen init.
 ;
-; Entry: HL 1ine mode byte of part. 1ine.
+; Entry: HL line mode byte of part. line.
 ;
 LCECF	MVI	M, $7F	; Wide char line contr byte
 	DCX	H
@@ -3297,16 +3298,16 @@ LCEF2	POP	H
 ;
 ; Part of RESET (C751).
 ;
-; During screen initialisation used to set a new 1ine mode byte between
+; During screen initialisation used to set a new line mode byte between
 ; both parts of the message. Line colour bytes are set for medium resolution.
 ;
-; Entry: HL: 1ine mode byte to be changed.
-;        DE: offset for calculation next 1ine mode byte
-; Exit:  HL: next 1ine mode byte
+; Entry: HL: line mode byte to be changed.
+;        DE: offset for calculation next line mode byte
+; Exit:  HL: next line mode byte
 ;
-LCEF9	MVI	M, $5F	; Set 1ine mode byte
+LCEF9	MVI	M, $5F	; Set line mode byte
 	DCX	H
-	MVI	M, $40	; Set 1ine colour byte
+	MVI	M, $40	; Set line colour byte
 	INX	H
 	DAD	D	; Addr. next line mode byte
 	RET
@@ -3334,7 +3335,7 @@ CITAB	.equ	*
 	.word	RREST	; (85) RESTORE
 	.word	RRET	; (86) RETURN
 	.word	RRUN	; (87) RUN
-	.word	RRUNN	; (88) RUN <1inenumber>
+	.word	RRUNN	; (88) RUN <linenumber>
 	.word	RGOTO	; (89) GOTO
 	.word	RGOSUB	; (8A) G0SUB
 	.word	RLOAD	; (8B) LOAD
@@ -3346,7 +3347,7 @@ CITAB	.equ	*
 	.word	RWTEM	; (91) WAIT MEM
 	.word	RWTET	; (92) WAIT TIME
 	.word	RLIST	; (93) LIST
-	.word	RLIS1	; (94) LIST <1inenumber>
+	.word	RLIS1	; (94) LIST <linenumber>
 	.word	RLIS2	; (95) LIST <part of progr>
 	.word	RSOUND	; (96) SOUND
 	.word	RNOISE	; (97) NOISE
@@ -3366,7 +3367,7 @@ CITAB	.equ	*
 	.word	RLETI	; (A5) assignment
 	.word	RIFTC	; (A6) IF THEN <statement>
 	.word	RIFG	; (A7) IF GOTO
-	.word	RIFTL	; (AB) IF THEN <1inenumber>
+	.word	RIFTL	; (AB) IF THEN <linenumber>
 	.word	RREM	; (A9) REM
 	.word	RFOR	; (AA) FOR .. TO
 	.word	RNEXT	; (AB) NEXT
@@ -3375,7 +3376,7 @@ CITAB	.equ	*
 	.word	RONGT	; (AE) ON GOTO
 	.word	RONGS	; (AF) ON GOSUB
 	.word	RDIM	; (B0) DIM
-	.word	ERREL	; (B1) *** (error 1ine run)
+	.word	ERREL	; (B1) *** (error line run)
 	.word	RUT	; (B2) UT
 	.word	RCALM	; (B3) CALLM
 	.word	RCLEAR	; (B4) CLEAR
@@ -3800,7 +3801,7 @@ XD1C8	MOV	A, E	; Get signbyte in A
 ; * part of EDIT (2EEC0) *
 ; ************************
 ;
-; Prints a text 1ine.
+; Prints a text line.
 ;
 LD1D1	JZ	LEEEC	; (2) If char=0
 	JP	LEEDE	; (2) Cont for char #01-7F
@@ -3851,7 +3852,7 @@ LD1E8	MOV	A, B
 ; * part of EDIT (2EE7B) *
 ; ************************
 ;
-; Skip to B'th position on 1ine.
+; Skip to B'th position on line.
 ;
 LD1FD	MOV	A, M	; Get char in A
 	ORA	A	; Set flags on it
@@ -3883,12 +3884,12 @@ LD20C	ROMCALL(4, $0C)	; Copy operand to MACC
 LD214	CALL	SUBDE	; Calc difference old/new
 	PUSH	H	; Preserve result
 	CALL	SCRATC	; Empty heap and symtab move progra to after heap
-	LHLD	CURRNT	; Get pntr to Current 1ine
+	LHLD	CURRNT	; Get pntr to Current line
 	MOV	A, H
 	ORA	L
 	POP	D	; Get difference
 	RZ		; Abort if direct cmd
-	DAD	D	; Add difference to pnt current 1ine
+	DAD	D	; Add difference to pnt current line
 	JMP	LCEBB
 	.byte 	$FF
 .endif
@@ -3899,7 +3900,7 @@ LD214	CALL	SUBDE	; Calc difference old/new
 ; ****************************************
 ;
 LD214	SHLD	HSIZE	; Update HEAP size
-	LHLD	CURRNT	; Get start current 1ine
+	LHLD	CURRNT	; Get start current line
 	MOV	A, H
 	ORA	L	; Check if CURRNT=0
 	POP	D
@@ -5297,7 +5298,7 @@ LD71A	SHLD	STBUSE	; Store end symtab
 ; Procedure depends on saving in program or not.
 ;
 LD720	PUSH	H
-	LHLD	CURRNT	; Get start current 1ine
+	LHLD	CURRNT	; Get start current line
 	MOV	A, H
 	ORA	L	; 0 if not during run
 	POP	H
@@ -5524,7 +5525,7 @@ LD7DE	DCR	C
 ; * PRINT MESSAGE ON NEW LINE *
 ; *****************************
 ;
-; New routine. It moves the cursor to a new 1ine before a message is printed.
+; New routine. It moves the cursor to a new line before a message is printed.
 ; Used for printing	'STOPPED IN LINE ...' and 'END PROGRAM'.
 ;
 XD7E6	CALL	COL0	; Cursor to column 0
@@ -5714,7 +5715,7 @@ LD86D	JC	ERROM	; Evt. run error 'OUT OF MEMORY'
 ; Entry: CY=0 if linenr. <= 0 or > $FFFF
 ;
 LD873	JNC	ERRRA	; Evt. run error 'NUMBER OUT OF RANGE'
-	JMP	SLINE	; (0) List current 1ine
+	JMP	SLINE	; (0) List current line
 ;
 ; **************************
 ; * INPUT FROM EDIT BUFFER *
@@ -6193,7 +6194,7 @@ ERRRU	CALL	ERRMS	; Print error message
 ; Exit:  BC preserved
 ;        AFDEHL corrupted
 ;
-ERRMS	CALL	COL0	; Cursor to begin (next) 1ine
+ERRMS	CALL	COL0	; Cursor to begin (next) line
 	MOV	A, B	; Get error nmber
 	LXI	H, ERITB	; Base of 1ist error messages
 	ADD	A	; Multiply error nr * 2
@@ -6213,10 +6214,10 @@ ERRMS	CALL	COL0	; Cursor to begin (next) 1ine
 ;
 ; Handles errors in direct mode. Only an error message is printed.
 ; Control is passed back to ELINA (LC93C) except if it is an error during encoding of a
-; stored 1ine.
+; stored line.
 ;
 ; Entry: A: Error number
-;        C: Points to 1ast read char acter on input 1ine
+;        C: Points to 1ast read char acter on input line
 ; Exit:  To Basic interpreter
 ;
 ERRCO	LDA	ERSFL	; Get ERSFL
@@ -6233,7 +6234,7 @@ ERRCO	LDA	ERSFL	; Get ERSFL
 ; PRINT LINE NUMBER IN WHICH ERROR OCCURED *
 ; ******************************************
 ;
-; Prints car.ret if current 1ine is a direct command else, prints ' IN LINE <1inenr>'
+; Prints car.ret if current line is a direct command else, prints ' IN LINE <linenr>'
 ; and car. ret.
 ;
 ; Entry: None
@@ -6243,13 +6244,13 @@ ERRCO	LDA	ERSFL	; Get ERSFL
 ;
 MSGIL	PUSH	H
 	PUSH	PSW
-	LHLD	CURRNT	; Get start current 1ine
+	LHLD	CURRNT	; Get start current line
 	MOV	A, H
 	ORA	L	; Check if 0
 	PUSH	PSW
 	JZ	@DA8C	; If direct, print car.ret
 	CALL_W(PMSGR, MSG02)	; Else, print 'IN LINE'
-	MOV	A, M	; Get 1ine nr in HL
+	MOV	A, M	; Get line nr in HL
 	INX	H
 	MOV	L, M
 	MOV	H, A
@@ -6441,15 +6442,15 @@ LDB27	JMP	CRLF	; Print car.ret
 ; * CURSOR TO TAB (8) *
 ; *********************
 ;
-; Part of 'List current 1ine' (0ECB3)
-; Moves cursor to column 8 after 1inenumber.
+; Part of 'List current line' (0ECB3)
+; Moves cursor to column 8 after linenumber.
 ;
 ; Exit:  BC preserved
 ;        AFDEHL corrupted
 ;
 SCTAB	.equ	*
 TAB	ROMCALL(5, $0C)	; Ask cursor position and size character screen
-	MOV	A, L	; X-coord after 1inenr in A
+	MOV	A, L	; X-coord after linenr in A
 	SUI	$06	; Tab must be 8
 	JMP	LDB1A	; Print additional spaces
 ;
@@ -6736,13 +6737,13 @@ ERMEL	REF_STR($D, MERROR)	; ERROR
 ; *******************
 ;
 ; Part of 'restart interpreter' (C853).
-; Scans keyboard and reads in a line on the current screen 1ine, up until car.ret.
+; Scans keyboard and reads in a line on the current screen line, up until car.ret.
 ; First prints car.ret. and a prompt ('*').
 ; The routine can be aborted on car.ret or Break only.
 ;
 ; Entry: A: Contains prompt
 ; Exit:  CY=1: Break pressed
-;        CY=0: HL:  Address 1st character on 1ine
+;        CY=0: HL:  Address 1st character on line
 ;              C=1: Offset 1st significant character
 ;        ABDEHL preserved
 ;
@@ -6885,7 +6886,7 @@ OUTSE	PUSH	PSW	; Preserve char
 ;
 	PUSH	PSW
 	MVI	A, $0A
-	CALL	OUTSE	; Send 1ine feed too
+	CALL	OUTSE	; Send line feed too
 	POP	PSW
 	RET
 ;
@@ -6911,7 +6912,7 @@ INSER	LDA	TIC_ST
 ; * RS232 FRAME ERROR - (not used) *
 ; **********************************
 ;
-; Break test for serial input 1ine.
+; Break test for serial input line.
 ;
 BRSER	LDA	TIC_ST
 	RAR
@@ -6935,13 +6936,13 @@ BRSER	LDA	TIC_ST
 ; * GET CHARACTER FROM LINE, NEGLECT TAB + SPACE *
 ; ************************************************
 ;
-; Entry: C: Position on currentt 1ine
+; Entry: C: Position on currentt line
 ; Exit:  Character in A; tab and space neglected
 ;        C: Points to next character
 ;        BDEHL preserved
 ;
 IGNBR	INR	C	; Pnts to next char
-IGNB	CALL	EFETCH	; Get char from 1ine
+IGNB	CALL	EFETCH	; Get char from line
 	CPI	' '	; Space?
 	JZ	IGNBR	; Then get next char
 	CPI	$09	; Tab? Then get next char
@@ -6952,13 +6953,13 @@ IGNB	CALL	EFETCH	; Get char from 1ine
 ; * GET CHARACTER TO ENCODE *
 ; ***************************
 ;
-; Returns a character from some position on the current 1ine.
+; Returns a character from some position on the current line.
 ; The source is determined by EFSW.
 ;
 ; Entry: C: Position on current line (max. 219)
-; Exit:  EFSW=0  - Keyboard: Char on 1ine pos in A
-;        EFSW>=2 - Edit buf: Char on EFEPT + 1ine pos in A
-;        EFSW=1  - String: Idem. If COUNT=1ine pos then char is car.ret.
+; Exit:  EFSW=0  - Keyboard: Char on line pos in A
+;        EFSW>=2 - Edit buf: Char on EFEPT + line pos in A
+;        EFSW=1  - String: Idem. If COUNT=line pos then char is car.ret.
 ;        F corrupted
 ;        BCDEHL preserved
 ;
@@ -6970,7 +6971,7 @@ EFETCH	LDA	EFSW
 ; If from string
 ;
 	LDA	EFECT	; If string: Get COUNT
-	CMP	C	; COUNT=pos. on curr.1ine?
+	CMP	C	; COUNT=pos. on curr.line?
 	MVI	A, $0D	; Then char is car.ret.
 	JZ	@DDFE	; And abort
 ;
@@ -6979,14 +6980,14 @@ EFETCH	LDA	EFSW
 @DDF4	PUSH	H
 	LHLD	EFEPT	; Get EFEPT
 	MOV	A, C
-	CALL	DADA	; Add curr.1ine pos to EFEFT
+	CALL	DADA	; Add curr.line pos to EFEFT
 	MOV	A, M	; Get character
 	POP	H
 @DDFE	RET
 ;
 ; If from screen
 ;
-@DDFF	ROMCALL(5, $15)	; Get character from 1ine
+@DDFF	ROMCALL(5, $15)	; Get character from line
 	RET
 ;
 ;
@@ -7352,7 +7353,7 @@ LDED6	STA	STEPF	; Reset step f1ag
 	LHLD	BRKPT	; Get start current command
 	MOV	B, H
 	MOV	C, L	; Store it in BC
-	JMP	LC87F	; Run BASIC 1ine
+	JMP	LC87F	; Run BASIC line
 ;
 ; *********************
 ; * RUN basiccmd STEP *
@@ -7402,7 +7403,7 @@ REND	.equ	*
 ; * RUN basiccmd IF *
 ; *******************
 ;
-; Used for IF .. GOTO <linenr> and for IF .. THEN <1inenr>.
+; Used for IF .. GOTO <linenr> and for IF .. THEN <linenr>.
 ;
 RIFG	.equ	*
 RIFTL	CALL	REXPL	; (0) Run 1ogical expression
@@ -7426,20 +7427,20 @@ RIFTC	CALL	REXPL	; (0) Run 1ogical expression
 ;
 ; If condition true
 ;
-	INX	B	; Skip length 1ine
+	INX	B	; Skip length line
 	ORA	A	; No special action
-	RET		; Execute rest of 1ine
+	RET		; Execute rest of line
 ;
 ; ******************
 ; * basiccmd GOSUB *
 ; ******************
 ;
-; Saves current program state on the interpreter stack and branches to a named 1ine.
+; Saves current program state on the interpreter stack and branches to a named line.
 ; The running FOR loop (if any) is saved in order to avoid problens if any unpaired NEXT
 ; is encountered.
 ; The stackpointer at the subroutine-entry is held to enable breaking out of a FOR-NEXT 1oop.
 ;
-RGOSUB	CALL	RLNFI	; (0) Get 1inenr and find it
+RGOSUB	CALL	RLNFI	; (0) Get linenr and find it
 ;
 ; Entry from ON .. GOSUB
 ;
@@ -7451,7 +7452,7 @@ LDF2D	POP	D	; Kill return addr
 	MOV	B, H	; Is new text position
 	MOV	C, L
 	LHLD	STKGOS	; Get stack 1evel last GOSUB
-	PUSH	H	; Save evt 1ink to previous subroutine entry
+	PUSH	H	; Save evt link to previous subroutine entry
 	LXI	H, $0000
 	SHLD	LOPVAR	; No running loop
 	DAD	SP	; SP in HL
@@ -7485,11 +7486,11 @@ RRET	POP	D	; Kill returnaddr
 ; * RUN basiccmd GOTO *
 ; *********************
 ;
-; Simply transfers control to a named 1ine.
+; Simply transfers control to a named line.
 ;
 ; Entry from IF .. GOTO
 ;
-RGOTO	CALL	RLNFI	; (0) Get 1inenr and find it
+RGOTO	CALL	RLNFI	; (0) Get linenr and find it
 ;
 ; Entry from ON .. GOTO
 ;
@@ -7539,10 +7540,10 @@ RONFN	CALL	REXI1	; (0) Get index of number
 	DCX	D
 	XCHG
 	DAD	H
-	DAD	B	; Pntr to reqd 1inenr
+	DAD	B	; Pntr to reqd linenr
 	MOV	B, H	; in BC
 	MOV	C, L
-	CALL	RLNFI	; (0) Find reqd 1ine
+	CALL	RLNFI	; (0) Find reqd line
 	POP	B
 	STC		; CY=1: OK
 	RET
@@ -7557,7 +7558,7 @@ RONFN	CALL	REXI1	; (0) Get index of number
 ; * RUN basiccmd RUN *
 ; ********************
 ;
-; No 1inenumber is given.
+; No linenumber is given.
 ;
 .if ROMVERS == 11
 ;
@@ -7596,7 +7597,7 @@ LDFA7	MOV	B, H
 ;
 ; After RUN, a line number is given.
 ;
-RRUNN	CALL	RLNFI	; (0) Read 1inenr and find it in textbufF
+RRUNN	CALL	RLNFI	; (0) Read linenr and find it in textbufF
 .if ROMVERS == 11
 	JMP	LDFA4	; Process RUN
 .endif
@@ -7669,6 +7670,15 @@ RWTEM	CALL	REXI2	; (0) Get memory addr in HL
 	MOV	D, A	; in D
 	LDAX	B	; Get next byte from text
 	INX	B
+;
+end_rom	.equ	*
+; ROM Bank 0 - 4KB starting $E000
+.bank 0, 4, $E000
+.segment "ROM0", 0
+.org	$E000
+;
+bgn_rom0	.equ	*
+;
 	SUI	$FF	; Check if only 2 arguments
 	NOP
 	CNZ	LCEDA	; If 3 arg: Get XOR mask
@@ -7995,25 +8005,25 @@ LE19F	LHLD	TXTBGN	; Get startaddr. tex tbuf
 	JMP	LE1CF	; Perform listing
 ;
 ; ********************************
-; * RUN basiccmd LIST 1inenumber *
+; * RUN basiccmd LIST linenumber *
 ; ********************************
 ;
-; Entry: BC points to 1inenumber.
+; Entry: BC points to linenumber.
 ; Exit:  BC updated
 ;        AFDEHL corrupted
 ;
-RLIS1	CALL	RLNF	; Read 1inenr and find it in textbuf
+RLIS1	CALL	RLNF	; Read linenr and find it in textbuf
 	NOP
 	MOV	D, H	; Linenr in DE
 	MOV	E, L
-	CC	DADM	; If 1inenr found: calc addr after string in HL
+	CC	DADM	; If linenr found: calc addr after string in HL
 	JMP	LE1CF	; Perform listing
 ;
 ; *****************************
 ; * RUN basiccmd LIST <range> *
 ; *****************************
 ;
-; Entry: BC points to 1st 1inenumber
+; Entry: BC points to 1st linenumber
 ; Exit:  BC updated
 ;        AFDEHL corrupted
 ;
@@ -8023,7 +8033,7 @@ RLIS2	LHLD	TXTBGN	; Get start textbuf
 	XCHG		; Addr in DE
 	LHLD	STBBGN	; Get start symtab
 	DCX	H	; End textbuf in HL
-	CALL	RLN	; Read 1st 1inenr
+	CALL	RLN	; Read 1st linenr
 	STC
 	CMC
 	CNZ	FINDL	; If 1st nr found: fi nd 2nd
@@ -8039,9 +8049,9 @@ LE1CF	PUSH	B
 	SHLD	LISW1	; Store start 1isted area
 @E1D9	MOV	H, B	; Start addr in HL
 	MOV	L, C
-	CALL	COMP	; Check if all 1ines 1isted
+	CALL	COMP	; Check if all lines 1isted
 	JZ	@E1F2	; Abort if ready
-	CALL	LD873	; List curent 1ine if 1inenr correct
+	CALL	LD873	; List curent line if linenr correct
 	CALL	FGETC	; Scan keyboard
 	JC	@E1F2	; Break pressed: stop 1isting
 	NOP
@@ -8119,7 +8129,7 @@ LE24D	CALL	HRINIT	; Restore original Heap + program buffers
 	NOP
 ;
 ; ******************************
-; * RUN basiccmd EDIT <1inenr> *
+; * RUN basiccmd EDIT <linenr> *
 ; ******************************
 ;
 REDI1	CALL	REDIN	; Init edit buffer
@@ -8185,7 +8195,7 @@ IFBNL	PUSH	PSW
 ; If char is car.ret
 ;
 	SHLD	v_EBUFR	; Update startaddr. editbuf
-	MVI	C, $00	; 1st pos on 1ine
+	MVI	C, $00	; 1st pos on line
 	POP	PSW	; No special action
 	RET
 ;
@@ -8339,7 +8349,7 @@ INPRS	LHLD	ERSSP	; Get saved stackpntr
 ; Stores data read from data statements or gotten from an input line on the correct location
 ;
 ; Entry: E:  Offset next character to encode (#0291).
-;        HL: Startaddress data 1ine.
+;        HL: Startaddress data line.
 ;
 L0E56	CALL	LE436	; (not used)
 ;
@@ -8349,7 +8359,7 @@ RRDIP	LDAX	B	; Get nr of data reqd
 LE367	DCR	D
 	JM	LE3C1	; Jump if ready
 	INR	E	; Offset next char
-	JZ	LE3A8	; Jump if at end of 1ine
+	JZ	LE3A8	; Jump if at end of line
 	DCR	E
 LE370	CALL	RVAR	; Get varptr in HL
 	PUSH	B
@@ -8377,12 +8387,12 @@ LE370	CALL	RVAR	; Get varptr in HL
 ; Check separator/terminator
 ;
 LE38B	MOV	C, A	; Offset in C
-	CALL	IGNB	; Get char from 1ine, neglect tab and space
+	CALL	IGNB	; Get char from line, neglect tab and space
 	INR	C	; Offset + 1
 	CPI	','	; ','?
 	JZ	@E399
 	CPI	$0D	; CR?
-	MVI	C, $FF	; Dummy offset for end of 1ine
+	MVI	C, $FF	; Dummy offset for end of line
 @E399	POP	D
 	MOV	E, C	; Offset in E
 	POP	B
@@ -8406,13 +8416,13 @@ LE3A2	CALL	LE4B8	; Perform LET (STR)
 	JMP	LE38B	; Check terminator/separator
 .endif
 ;
-; If end of 1ine reached ('CR')
+; If end of line reached ('CR')
 ;
 LE3A8	LDA	RDIPF	; Get flag for running inputs
 	ORA	A
 	JZ	@E3BB	; Quit if not running inputs
-	CALL	COL0	; Cursor to begin next 1ine
-	CALL	INPGT	; Print '?', read input 1ine
+	CALL	COL0	; Cursor to begin next line
+	CALL	INPGT	; Print '?', read input line
 	JC	LE3C2	; Abort if break pressed
 	JMP	LE370	; Cont reading
 ;
@@ -8441,7 +8451,7 @@ RRISN	ANA	A	; Set f1ags
 RRISN	LHLD	EFEPT	; Get EFEPT
 	LXI	D, $FFFC
 	DAD	D	; EFEPT-4
-	SHLD	CURRNT	; Store start current 1ine
+	SHLD	CURRNT	; Store start current line
 	JMP	ERRSN	; Run 'SYNTAX ERROR'
 .endif
 ;
@@ -8450,7 +8460,7 @@ RRISN	LHLD	EFEPT	; Get EFEPT
 ; **************************
 ;
 ; Continuation of 0E447.
-; Prints a prompt ('?') on the screen and gets a text1ine from input.
+; Prints a prompt ('?') on the screen and gets a textline from input.
 ;
 INPGT	PUSH	D
 	ROMCALL(5, $0C)	; Ask cursor pos. and size char screen
@@ -8609,7 +8619,7 @@ LE452	STA	DATAC	; Save offset next char to encode
 ; Valid as direct command or in program. Computes variable pointer or variable reference and
 ; checks type. 'LET' can be explicitly or implicitly given.
 ;
-; Entry: BC: Points to program 1ine
+; Entry: BC: Points to program line
 ; Exit:  BC: Updated
 ;        A:  Type of variable
 ;        FDEHL corrupted
@@ -8706,7 +8716,7 @@ LE4B8	PUSH	PSW
 ; SOUND CHAN OFF.
 ; SOUND OFF
 ;
-; * Entry: BC: Points to program 1ine.
+; * Entry: BC: Points to program line.
 ; Exit	EC updated, AFDEHL corrupted.
 ;
 RSOUND	LDAX	B	; Get 1st expr
@@ -8929,7 +8939,7 @@ RCURS	CALL	RCOOR	; Evaluate coordinate
 ; * RUN basiccmd MODE *
 ; *********************
 ;
-; Entry: BC: Points to program 1ine
+; Entry: BC: Points to program line
 ;
 RMODE	LDAX	B	; Get reqd mode in A
 	INX	B
@@ -9039,7 +9049,7 @@ RCOLG	CALL	R4COL	; Get colours in scratch area
 ; * GET 4 COLOURS INTO SCRATCH AREA *
 ; ***********************************
 ;
-; Colour data from a program 1ine are stored in scratch area SCOLT/SCOLG (COLWK).
+; Colour data from a program line are stored in scratch area SCOLT/SCOLG (COLWK).
 ;
 ; Exit: HL: Points to start scratch area
 ;
@@ -9252,7 +9262,7 @@ RTROF	XRA	A
 ; * READ LINENUMBER *
 ; *******************
 ;
-; Entry: BC: Points to 1inenumber
+; Entry: BC: Points to linenumber
 ; Exit:  Z=0: Linenumber in HL
 ;        HL preserved
 ;        BC updated
@@ -9263,11 +9273,11 @@ RLN	PUSH	H
 	LDAX	B
 	INX	B
 	MOV	H, A
-	LDAX	B	; Get 1inenr in HL
+	LDAX	B	; Get linenr in HL
 	INX	B
 	MOV	L, A
 	ORA	H
-	JZ	@E6E5	; Abort if 1inenr is 0
+	JZ	@E6E5	; Abort if linenr is 0
 	XTHL		; Linenr on stack
 @E6E5	POP	H	; O1d HL or linenr in HL
 	RET
@@ -9276,20 +9286,20 @@ RLN	PUSH	H
 ; * READ LINENUMBER AND FIND IT IN TEXTBUFFER *
 ; *********************************************
 ;
-; Entry: BC: Points to 1inenumber.
+; Entry: BC: Points to linenumber.
 ; Exit:  BC updated, DE preserved, AF corrupted
 ;        (RLNF) or preserved (RLNFI)
-;        HL: Points to 1st 1inenr reqd. number
+;        HL: Points to 1st linenr reqd. number
 ;        CY=1: Linenumber found
 ;        CY=0: Not found
 ;
-RLNF	CALL	RLN	; Get 1inenr in HL
+RLNF	CALL	RLN	; Get linenr in HL
 	JMP	FINDL	; Find it in textbuffeer
 ;
 ; Idem as RLNF, but with error reporting
 ;
 RLNFI	PUSH	PSW
-	CALL	RLNF	; Read 1inenr and find it
+	CALL	RLNF	; Read linenr and find it
 	MVI	A, $04
 	JNC	ERROR	; Run error 'UNDEFINED NUMBER' if not found
 	POP	PSW
@@ -10886,14 +10896,14 @@ RSCRN	CALL	RCOOR	; Eval given coord
 ; ***********************
 ;
 ; Entry: BC: Points to start of textline
-; Exit:  BC: Points to start of next 1ine
+; Exit:  BC: Points to start of next line
 ;        DEHL preserved
 ;        AF corrupted
 ;
 SLINE	PUSH	D
 	PUSH	H
-	INX	B	; Pnts to 1ine nr
-	CALL	LEFAE	; List 1ine nr
+	INX	B	; Pnts to line nr
+	CALL	LEFAE	; List line nr
 	MVI	A, $08
 	CALL	SCTAB	; Cursor to tab 8
 @ECB6	CALL	SCOM	; List statement
@@ -10966,8 +10976,8 @@ SCOM	LDAX	B	; Get token
 ; data byte after the addresses in the table on LCD8B.
 ;
 HROUTINE	.word	SCN1	; (00) nothing more
-	.word	SCN2	; (01) 1inenr
-	.word	SCN3	; (02) 1inenr 1inenr (not used)
+	.word	SCN2	; (01) linenr
+	.word	SCN3	; (02) linenr linenr (not used)
 	.word	SCN5	; (03) unquoted string
 	.word	SCN6	; (04) E (E=expr)
 	.word	SCN7	; (05) E, E
@@ -10976,7 +10986,7 @@ HROUTINE	.word	SCN1	; (00) nothing more
 	.word	SCN10	; (08) E,E E,E E
 	.word	SCN11	; (09) E E E E
 	.word	SCN12	; (0A) E
-	.word	SCN13	; (0E) 1inenr-linenr
+	.word	SCN13	; (0B) linenr-linenr
 	.word	SCN14	; (0C) sound
 	.word	SC14A	; (0D) noise
 	.word	SCN15	; (0E) envelope
@@ -11011,16 +11021,16 @@ SCN1	RET
 ; * LIST 1 OR 2 LINENUMBERS *
 ; ***************************
 ;
-; SCN2: List 1 1ine number.
-; SCN3: List 2 1ine numbers, separated by space (not used).
+; SCN2: List 1 line number.
+; SCN3: List 2 line numbers, separated by space (not used).
 ;
 ; Exit: BC updated
 ;       DE preserved
 ;       AFHL corrupted
 ;
-SCN3	CALL	LEFAE	; List 1inenr
+SCN3	CALL	LEFAE	; List linenr
 	CALL	SCHSP	; Print space
-SCN2	JMP	LEFAE	; List 1inenr
+SCN2	JMP	LEFAE	; List linenr
 ;
 ; ************************
 ; * LIST UNQUOTED STRING *
@@ -11042,7 +11052,7 @@ SCN6	JMP	SCEXP	; List <expr>
 ; * LIST <EXPR> <EXPR> <EXPR> <EXPR> *
 ; ************************************
 ;
-; Exit BC updated, DE preser ved, AFHL Ccorrupted.
+; Exit BC updated, DE preserved, AFHL corrupted.
 ;
 SCN11	CALL	SEXPS	; List <expr>; print space
 S3EXP	CALL	SEXPS	; List <expr>; print space
@@ -11053,7 +11063,7 @@ SCN8	CALL	SEXPS	; List <expr>; print space
 ; *LIST <EXPR>, <EXPR> <EXPR>, <EXPR> <EXPR> *
 ; ********************************************
 ;
-; *Exit: BC updated, DE preserved, AFHL COPrupted
+; *Exit: BC updated, DE preserved, AFHL corrupted.
 ; *
 SCN10	CALL	SCN7	; List <expr>, <expr>
 	CALL	SCHSP	; Print space
@@ -11071,7 +11081,7 @@ LED6E	LDAX	B	; Get next byte
 	INX	B
 	RZ		; Then abort
 	DCX	B
-	CALL	SCHCO	; Print ',0
+	CALL	SCHCO	; Print ','
 	JMP	SCEXP	; List <expr>
 ;
 ; **************************
@@ -11080,9 +11090,9 @@ LED6E	LDAX	B	; Get next byte
 ;
 ; Exit: BC updated, DE preserved, AFHL corrupted.
 ;
-SCN13	CALL	LEFAE	; List 1inenr
+SCN13	CALL	LEFAE	; List linenr
 	CALL_B(SCHRI, '-') 	; Print '-'
-	JMP	LEFAE	; List 1inenr
+	JMP	LEFAE	; List linenr
 ;
 ; *********************************
 ; * LIST EXPRESSION AFTER 'SOUND' *
@@ -11105,9 +11115,9 @@ LED90	CALL_W(STXTS, LED97)	; Else print 'OFF'
 ;
 LED97	PSTR("OFF")
 ;
-; *********************************
-; * LIST EXPRESSION AFTER NOI SE *
-; ****************1****************
+; *******************************
+; * LIST EXPRESSION AFTER NOISE *
+; *******************************
 ;
 ; Exit: BC updated, E preserved, AFDHL corrupted.
 ;
@@ -11230,21 +11240,21 @@ LEE15	PSTR("THEN")
 ; * LIST EXPRESSION AFTER 'IF' (2) *
 ; **********************************
 ;
-; Lists '<expr> GOTO <1inenr>'.
+; Lists '<expr> GOTO <linenr>'.
 ; *
 SCN22	CALL	SEXPS	; List <expr>; print space
 	CALL_W(STXTS, SGOTO)	; Print 'GOTO'
-	JMP	LEFAE	; List 1inenr
+	JMP	LEFAE	; List linenr
 ;
 ; **********************************
 ; * LIST EXPRESSION AFTER 'IF' (3) *
 ; **********************************
 ;
-; Lists '<expr> THEN <1inenr>'.
+; Lists '<expr> THEN <linenr>'.
 ;
 SC22A	CALL	SEXPS	; List <expr>; print space
 	CALL_W(STXTS, LEE15)	; Print 'THEN'
-	JMP	LEFAE	; List inenr
+	JMP	LEFAE	; List linenr
 ;
 ; *******************************
 ; * LIST EXPRESSION AFTER 'FOR' *
@@ -11296,28 +11306,28 @@ SCN25	LDAX	B	; Get nr of exp
 ; * LIST EXPRESSION AFTER 'ON' (1) *
 ; **********************************
 ;
-; Lists '<expr> GOTO <1inenrs>'.
+; Lists '<expr> GOTO <linenrs>'.
 ;
 SCN26	CALL	SEXPS	; List <expr>; print space
 	CALL_W(STXTS, SGOTO)	; Print GOTO
-	JMP	LEE79	; List 1inenrs
+	JMP	LEE79	; List linenrs
 ;
 ; **********************************
 ; * LIST EXPRESSION AFTER 'ON' (2) *
 ; **********************************
 ;
-; Lists '<expr> GOSUB <1inenrs>'.
+; Lists '<expr> GOSUB <linenrs>'.
 ;
 SCN27	CALL	SEXPS	; List <expr>; print space
 	CALL_W(STXTS, SGOSUB)	; Print GOSUB
-LEE79	LDAX	B	; Get nr of 1inenrs
+LEE79	LDAX	B	; Get nr of linenrs
 	INX	B
 	MOV	D, A	; into D
-@EE7C	CALL	LEFAE	; List 1inenr
+@EE7C	CALL	LEFAE	; List linenr
 	DCR	D
 	RZ		; Abort if ready
 	CALL	SCHCO	; Print ','
-	JMP	@EE7C	; List next 1inenr
+	JMP	@EE7C	; List next linenr
 ;
 ; *********************************
 ; * LIST EXPRESSION AFTER 'CALLM' *
@@ -11381,7 +11391,7 @@ LEE94	PUSH	H	; Save pntr to volume
 SCEXP	PUSH	D
 	LDAX	B	; Get opcode
 	ORA	A
-	JP	LEEDF	; If no starting operator
+	JP	@EEDF	; If no starting operator
 ;
 ; If starting with operator
 ;
@@ -11419,27 +11429,27 @@ SCEXP	PUSH	D
 ;
 ; Not starting with operator
 ;
-LEEDF	RLC
+@EEDF	RLC
 	RLC
-	JC	LEEF2	; Jump if var.ref
+	JC	@EEF2	; Jump if var. ref
 	RLC
-	JC	LEEED	; Jump if function call
+	JC	@EEED	; Jump if function call
 ;
 ; If constant
 ;
-LEEE8	CALL	SCON	; List constant
+	CALL	SCON	; List constant
 	POP	D
 	RET
 ;
 ; If function call
 ;
-LEEED	CALL	SFUN	; List function reference
+@EEED	CALL	SFUN	; List function reference
 	POP	D
 	RET
 ;
 ; If variable reference
 ;
-LEEF2	CALL	LEEFC	; List a var.reference  (array with arguments)
+@EEF2	CALL	LEEFC	; List a var.reference (array with arguments)
 	POP	D
 	RET
 ;
@@ -11592,19 +11602,19 @@ SCON	LDAX	B	; Get type of constant
 ; * LISTA LINENUMBER *
 ; *********************
 ;
-; Entry: BC Points to 1inenumber
+; Entry: BC Points to linenumber
 ; Exit:  BC updated, DE preserved, AFHL corrupted
 ;
-LEFAE	LDAX	B	; Get hibyte 1inenr
+LEFAE	LDAX	B	; Get hibyte linenr
 	INX	B
 	MOV	H, A	; in H
-	LDAX	B	; Get 1obyte 1inenr
+	LDAX	B	; Get 1obyte linenr
 	INX	B
 	MOV	L, A	; in L
 LEFB4	CALL	FR2BY	; Linenr into MACC
 	MOV	A, H
 	ORA	L	; Linenr <> 0?
-	CNZ	SCINT	; Then 1ist 1inenr
+	CNZ	SCINT	; Then 1ist linenr
 	RET
 ;
 ; *************************************
@@ -15632,11 +15642,11 @@ ZSCUS	JMP	SCURS	; Set cursor position
 ZSCUA	JMP	SCURA	; Ask Cursor position and size character screen
 ZSCUM	JMP	SCURM	; Set cursor mode
 ZSCUI	JMP	SCURI	; Flash cursor
-ZSFETC	JMP	SFETC	; Get character from 1ine
+ZSFETC	JMP	SFETC	; Get character from line
 ZSMODE	JMP	SSETM	; Change mode
 ZSCLG	JMP	SCOLG	; Set graphics colours
 ZSDOT	JMP	SDOT	; Draw a dot on the screen
-ZSDRAW	JMP	SDRAW	; Draw a 1ine on the screen
+ZSDRAW	JMP	SDRAW	; Draw a line on the screen
 ZSFILL	JMP	SFILL	; Fill a rectangular area
 ZSCRN	JMP	SSCRN	; Ask colour of a point on the screen and the size of the graphics screen
 ;
@@ -15664,7 +15674,7 @@ CON0	.word	$0CB0	; First free RAM byte
 	.word	$0000	; End area used splitting mode
 	.word	$0000	; Start archive save area
 	.word	$0000	; Number of blobs horizontally
-	.byte	$00	; Number of 1ines of graphics
+	.byte	$00	; Number of lines of graphics
 	.byte	$00	; Number saved graphics lines
 	.byte	$00	; Number of bytes/line
 ;
@@ -15683,7 +15693,7 @@ CON1	.word	$0638	; First free RAM byte
 	.word	$0048	; Number of blobs horizontal1y
 	.byte	$41	; Number of lines of graphics
 	.byte	$0C	; Number archive area lines
-	.byte	$18	; Number of bytes/1ine
+	.byte	$18	; Number of bytes/line
 ;
 ; ******************************
 ; * CONSTANT TABLE MODES 1A/2A *
@@ -15698,9 +15708,9 @@ CON1A	.word	$0860	; First free RAM byte
 	.word	$0748	; End area used splitting mode
 	.word	$0628	; Start graph temp save area
 	.word	$0048	; Number of blobs horizontally
-	.byte	$41	; Number of 1ines of graphics
-	.byte	$0C	; Number saved graphics 1ines
-	.byte	$18	; Number of bytes/1ine
+	.byte	$41	; Number of lines of graphics
+	.byte	$0C	; Number saved graphics lines
+	.byte	$18	; Number of bytes/line
 ;
 ; ****************************
 ; * CONSTANT TABLE MODES 3/4 *
@@ -15715,9 +15725,9 @@ CON3	.word	$177C	; First free RAM byte
 	.word	$1BBC	; End area used splitting mode
 	.word	$1554	; Start graph archive area
 	.word	$00A0	; Number of blobs horizontal1y
-	.byte	$82	; Number of 1ines of graphics
-	.byte	$18	; Number archive area 1ines
-	.byte	$2E	; Number of bytes/1ine
+	.byte	$82	; Number of lines of graphics
+	.byte	$18	; Number archive area lines
+	.byte	$2E	; Number of bytes/line
 ;
 ; ******************************
 ; * CONSTANT TAELE MODES 3A/4A *
@@ -15733,8 +15743,8 @@ CON3A	.word	$19A4	; First free RAM byte
 	.word	$176C	; Start graph temp save area
 	.word	$00A0	; Number of blobs horizontally
 	.byte	$82	; Number of lines of graphics
-	.byte	$18	; Number saved graphics 1ines
-	.byte	$2E	; NLmber of bytes/1ine
+	.byte	$18	; Number saved graphics lines
+	.byte	$2E	; NLmber of bytes/line
 ;
 ; ****************************
 ; * CONSTANT TABLE MODES 5/6 *
@@ -15749,7 +15759,7 @@ CON5	.word	$5A20	; First free RAM byte
 	.word	$6988	; End area used splitting mode
 	.word	$4CD0	; Start graph archive area
 	.word	$0150	; Number of blobs horizontally
-	.byte	$00	; Number of 1ines of graphics
+	.byte	$00	; Number of lines of graphics
 	.byte	$2C	; Number saved graphics lines
 	.byte	$5A	; Number of bytes/line
 ;
@@ -15767,7 +15777,7 @@ CON5A	.word	$5C48	; First free RAM byte
 	.word	$5A10	; Start graph temp save area
 	.word	$0150	; Number of blobs horizontally
 	.byte	$00	; Number of lines of graphics
-	.byte	$2C	; Number saved graphics 1ines
+	.byte	$2C	; Number saved graphics lines
 	.byte	$5A	; Number of bytes/line
 ;
 ; *********************
@@ -15848,7 +15858,7 @@ SOUTC	STC		; CY=1
 	PUSH	PSW
 	LDA	LNEND	; Get addr 1ast byte on line
 	CMP	L	; Reached?
-	JZ	LE1A9	; Then extend 1ines
+	JZ	LE1A9	; Then extend lines
 LE127	POP	PSW
 	MOV	M, A	; Put char on screen
 	DCX	H
@@ -15881,8 +15891,8 @@ LE13D	LHLD	LNSTR	; Get startaddr current line
 	XCHG		; in DE
 	LHLD	CHE	; Get end char area
 	CALL	COMP_	; Check if end is reached
-	XCHG		; Next 1ine mode byte in HL
-	CZ	SCROLL	; If end reached: scroll up one 1ine
+	XCHG		; Next line mode byte in HL
+	CZ	SCROLL	; If end reached: scroll up one line
 	CZ	LE1FD	; and init. this line with blanks
 LE153	CALL	SSETC	; Cursor on begin next line
 	JMP	XRCC	; Quit; char accepted
@@ -15900,21 +15910,21 @@ LE159	LHLD	CHE	; Get end character area
 LE166	XCHG		; Cursor position in DE
 	LHLD	LNSTR	; Get start addr current line
 	LXI	B, $FFF8	; Left border width
-	DAD	B	; Get addr 1st char on 1ine
+	DAD	B	; Get addr 1st char on line
 	CALL	COMP_	; Cursor at begin of line?
 	XCHG
 	JZ	LE135	; Then ignore char; abort
 	INX	H	; Cursor one location backwards
 	INX	H
 	MVI	M, ' '	; Load space in this location
-	LDA	LCONT	; Get number of extended 1ine
+	LDA	LCONT	; Get number of extended line
 	ORA	A
-	JZ	LE12B	; If no cont 1ine: put cursor on screen
+	JZ	LE12B	; If no cont line: put cursor on screen
 	JM	LE12B	; If char accepted: put cursor on screen
 ;
 ; Backspace on a continuation line
 ;
-	PUSH	D	; Save addr 1st byte on 1ine on stack
+	PUSH	D	; Save addr 1st byte on line on stack
 	XCHG		; HL is cursor position
 	LXI	B, $FFF2
 	DAD	B	; HL end indent area
@@ -15925,21 +15935,21 @@ LE166	XCHG		; Cursor position in DE
 	XCHG
 	MVI	M, ' '	; Else cancel cont char (C)
 	LXI	H, LCONT
-	DCR	M	; Decr. number extended 1ines
-	LHLD	LNSTR	; Get startaddr current 1ine
+	DCR	M	; Decr. number extended lines
+	LHLD	LNSTR	; Get startaddr current line
 	LXI	D, GRR
-	DAD	D	; Pnts to start previous 1ine
-	CALL	SSETL	; Store addr line mode byte as current one and set 1ast byte on that 1ine
+	DAD	D	; Pnts to start previous line
+	CALL	SSETL	; Store addr line mode byte as current one and set 1ast byte on that line
 	LXI	D, $FF80
 	DAD	D
 	JMP	LE12B	; Put cursor on screen quit, char accepted
 ;
-; If end of 1ine is reached
+; If end of line is reached
 ;
 LE1A9	LDA	LCONT	; Get number extended lines
 	CPI	$03	; Max (3) reached?
 	JNC	LE134	; Then put cursor on screen, ret
-	INR	A	; Incr. number ext. 1ines
+	INR	A	; Incr. number ext. lines
 	MOV	B, A	; Store it in B
 	MVI	A, $0D
 	CALL	SOUTC	; Output car.ret
@@ -15961,10 +15971,10 @@ LE1A9	LDA	LCONT	; Get number extended lines
 ;
 ; Entry: None
 ; Exit;  AF preserved, BC corrupted
-;        DE: end of bottom 1ine
+;        DE: end of bottom line
 ;        HL: start of bottom line
 ;
-SCROLL	LXI	B, $FF7A	; -86 1ength one 1ine
+SCROLL	LXI	B, $FF7A	; -86 1ength one line
 ;
 ; Entry from Edit:
 ; Scrol1 screen for number of positions given in BC (-2  = 1 position left)
@@ -15973,32 +15983,32 @@ LE1CE	PUSH	PSW
 	LHLD	CHS	; Get startaddr character area and store it in DE
 	MOV	D, H
 	MOV	E, L
-	DAD	B	; Get addr 1ine mode byte next 1ine
+	DAD	B	; Get addr line mode byte next line
 	XCHG		; in DE
 @E1D6	LXI	B, $FFF8
-	DAD	B	; Get 1st useable 1ocation on 1st 1ine
+	DAD	B	; Get 1st useable 1ocation on 1st line
 	XCHG		; in DE
 	DAD	B	; Get 1st useable 1acation on 2nd 11ne
-	XCHG		; in DE; 1st 1ine in HL
+	XCHG		; in DE; 1st line in HL
 	MVI	B, 60	; max 60 characters
-@E1DF	LDAX	D	; Get char from 2nd 1ine
-	MOV	M, A	; and move it to 1st 1ine
+@E1DF	LDAX	D	; Get char from 2nd line
+	MOV	M, A	; and move it to 1st line
 	DCX	D
 	DCX	D	; Next char 2nd line
 	DCX	H
-	DCX	H	; Next 1oc 1st 1ine
+	DCX	H	; Next 1oc 1st line
 	DCR	B
-	JNZ	@E1DF	; Next char to be moved 1 1ine
+	JNZ	@E1DF	; Next char to be moved 1 line
 	LXI	B, $FFFA
-	DAD	B	; Get addr 1ine mode byte 2nd 1ine in DE
+	DAD	B	; Get addr line mode byte 2nd line in DE
 	XCHG
 	DAD	B	; Get addr line mode byte 3rd line
-	XCHG		; in DE; 2nd 1ine in HL
+	XCHG		; in DE; 2nd line in HL
 	PUSH	H
 	LHLD	CHE	; Get addr end character area
 	CALL	COMP_	; Check if end reached
 	POP	H
-	JC	@E1D6	; If not at end; scroll next 1ine
+	JC	@E1D6	; If not at end; scroll next line
 	POP	PSW
 	RET
 ;
@@ -16008,7 +16018,7 @@ LE1CE	PUSH	PSW
 ; * INITIALISE SCREEN CHARACTER AREA *
 ; ************************************
 ;
-; Fills screen with spaces (clears screen). The 1ine mode byte is set $7A, the line colour
+; Fills screen with spaces (clears screen). The line mode byte is set $7A, the line colour
 ; byte to $40, all colour bytes to $00 (4-colour text), all character bytes to $20.
 ;
 ; Entry: HL: 1st byte after header
@@ -16021,17 +16031,17 @@ LE1FD	PUSH	PSW
 	PUSH	H
 @E201	MVI	M, $7A	; Set control byte for char mode
 	DCX	H
-	MVI	M, $40	; Set 1ine colour byte
+	MVI	M, $40	; Set line colour byte
 	DCX	H
-	MVI	B, $42	; Number of bytes/1ine
+	MVI	B, $42	; Number of bytes/line
 @E209	MVI	M, ' '	; Data byte is space
 	DCX	H
 	MVI	M, $00	; Colour byte is 00
 	DCX	H
 	DCR	B
 	JNZ	@E209	; Next screen addr
-	CALL	COMP_	; All 1ines done?
-	JNZ	@E201	; Next 1ine if not
+	CALL	COMP_	; All lines done?
+	JNZ	@E201	; Next line if not
 	JMP	XRET	; Popall, ret
 ;
 ; ****************************
@@ -16160,7 +16170,7 @@ SCURS	ORA	A
 	PUSH	B
 	PUSH	PSW
 	MOV	A, L	; X-coord in A
-	CPI	60	; After end of 1ine?
+	CPI	60	; After end of line?
 	JNC	LE2C5
 	ADD	A	; X-coord * 2
 	MOV	C, A	; in C
@@ -16168,7 +16178,7 @@ SCURS	ORA	A
 	LDA	SMODE	; Get current screen mode
 	ORA	A
 	JM	LE295	; Jump if mode 0
-	MVI	B, 4	; Nr of 1ines in A-modes
+	MVI	B, 4	; Nr of lines in A-modes
 	RAR
 	JNC	LE2C5	; Error if all-graphics mode
 LE295	MOV	A, H	; Y-coord in A
@@ -16176,12 +16186,12 @@ LE295	MOV	A, H	; Y-coord in A
 	JNC	LE2C5	; Then request off streen
 	CALL	CURDEL	; Delete old cursor
 	INR	A
-	LXI	H, $0086	; Length 1 char 1ine
-	CALL	HLMUL_	; Calc 1ength reqd number af 1ines (HL=A*HL)
+	LXI	H, $0086	; Length 1 char line
+	CALL	HLMUL_	; Calc 1ength reqd number af lines (HL=A*HL)
 	XCHG		; in DE
 	LHLD	GAE	; Store end archive area
-	DAD	D	; Start of regd 1inee
-	CALL	SSETL	; Store addr 1ine mode byte current 1ine and store last byte on that 1ine
+	DAD	D	; Start of regd linee
+	CALL	SSETL	; Store addr line mode byte current line and store last byte on that line
 	LXI	D, $0008
 	CALL	SUBDE_	; HL = start of right border
 	MOV	E, C
@@ -16189,7 +16199,7 @@ LE295	MOV	A, H	; Y-coord in A
 	CALL	SUBDE_	; Subtract char offset
 	CALL	CURSET	; Put cursor on screen
 	MVI	A, $00
-	STA	LCONT	; No extended 1ines
+	STA	LCONT	; No extended lines
 	POP	PSW	; No-error return
 LE2C1	POP	B
 	POP	D
@@ -16224,7 +16234,7 @@ SCURA	PUSH	PSW
 	LDA	SMODE	; Get current screen mode
 	RAR		; Char mode?
 	JNC	LE313	; Abort if not
-	LHLD	LNSTR	; Get startaddr cursor 1ine
+	LHLD	LNSTR	; Get startaddr cursor line
 	PUSH	H	; Save it on stack
 	LXI	D, $FFF8	; Size 1eft border
 	DAD	D	; Get addr 1st char byte
@@ -16232,7 +16242,7 @@ SCURA	PUSH	PSW
 	LHLD	CURSOR	; Get cursor pos addr
 	XCHG
 	CALL	SUBDE_	; Calc difference of cursor pos from begin of line
-	POP	D	; Get startaddr current 1ine
+	POP	D	; Get startaddr current line
 	MOV	A, L	; (x-coord cursor)*2 in A
 	ORA	A
 	RAR		; Now x-coord cursor in A
@@ -16241,8 +16251,8 @@ SCURA	PUSH	PSW
 	LXI	B, 134	; Length 1 char line
 	XRA	A	; Init Y-pos
 @E2F6	PUSH	PSW	; Save it on stack
-	DAD	B	; Get 1ine mode byte next line
-	CALL	COMP_	; Is current line this 1ine?
+	DAD	B	; Get line mode byte next line
+	CALL	COMP_	; Is current line this line?
 	JZ	@E303	; Then jump
 	POP	PSW	; Get Y-coord
 	INR	A	; Incr it
@@ -16255,7 +16265,7 @@ SCURA	PUSH	PSW
 	ORA	A
 	JM	LE311	; Jump if mode 0
 	MVI	D, 3	; Nr of lines for A-modes -1
-LE311	MVI	E, 59	; Nr of char/1ine -1
+LE311	MVI	E, 59	; Nr of char/line -1
 LE313	POP	B
 	POP	PSW
 	RET
@@ -16408,26 +16418,26 @@ SFETC	PUSH	B
 	PUSH	H
 	PUSH	PSW
 	LXI	H, 134	; Total nr. of bytes/line
-	LDA	LCONT	; Get number extended 1ines
+	LDA	LCONT	; Get number extended lines
 	CALL	HLMUL_	; Calc total nr of bytes (HL=A*HL)
 	XCHG		; in DE
-	LHLD	LNSTR	; Get addr line mode byte current 1ine
-	DAD	D	; Calc start of 1ine on screen
+	LHLD	LNSTR	; Get addr line mode byte current line
+	DAD	D	; Calc start of line on screen
 	LXI	D, $FFEA
 	DAD	D	; End indent area
 	XCHG		; in DE
-	MVI	A, $F9	; 1st bytes on 1ine not useable
-	ADD	C	; Add pos of required char on 1ine
+	MVI	A, $F9	; 1st bytes on line not useable
+	ADD	C	; Add pos of required char on line
 	PUSH	PSW
 	MVI	B, $00
 	JNC	LE3B2	; Jump if in 1st 7 positions
 	DCR	B
-@E3AC	SUI	$35	; 60 useable positions/1ine
-	INR	B	; Count nr of extended 1ines
-	JNC	@E3AC	; Jump if not on thís 1ine
+@E3AC	SUI	$35	; 60 useable positions/line
+	INR	B	; Count nr of extended lines
+	JNC	@E3AC	; Jump if not on thís line
 LE3B2	MOV	A, B	; Nr of extensions in A
-	LXI	H, $FFE4	; Nr of not used bytes/1ine
-	CALL	HLMUL_	; Add-ons for 1ine ends
+	LXI	H, $FFE4	; Nr of not used bytes/line
+	CALL	HLMUL_	; Add-ons for line ends
 	DAD	D
 	POP	PSW	; Restore pos of char on line
 	MOV	E, A	; into E
@@ -16443,7 +16453,7 @@ LE3B2	MOV	A, B	; Nr of extensions in A
 	CALL	COMP_	; Compare it with addr of char
 	MVI	A, $0D	; Car.ret in A
 	JNC	@E3D2	; If on or after cursor
-	LDAX	D	; Get character from 1ine
+	LDAX	D	; Get character from line
 @E3D2	MOV	H, A	; Save it temporarily
 	POP	PSW	; Restore flags
 	MOV	A, H	; Get character in A
@@ -16563,7 +16573,7 @@ SSMG	STC
 	PUSH	D
 	LXI	D, COLMG	; Addr COLORG table
 	LHLD	SCREEN	; Get addr 1st byte screen RAM
-	MVI	B, $06	; Depth each blanking 1ine in header -1
+	MVI	B, $06	; Depth each blanking line in header -1
 	CALL	SSUBL	; Set up header with COLORG colours
 	JMP	LE438	; Quit, all OK
 ;
@@ -16588,7 +16598,7 @@ SSM	STC
 	DCR	A
 	JZ	LD700	; Then check if sufficient RAM available and change mode
 	CALL	CURDEL	; Delete cursor
-	LDA	GRL	; Get nr of graphics 1ines
+	LDA	GRL	; Get nr of graphics lines
 	MOV	C, A	; in C
 	LHLD	SCTOP	; Get addr top graph area
 	CALL	SGINIT	; Blank whole screen
@@ -16672,10 +16682,10 @@ SSMA	STC
 	LHLD	CHE	; Get addr end char area
 	LDA	SMODE	; Get current screen mode
 	RAR		; Check mode
-	MVI	C, $04	; Nr of char 1ines in A-mode
+	MVI	C, $04	; Nr of char lines in A-mode
 	XCHG
 	CNC	LE1FD	; Blank char area
-	CNC	SSETC	; Cursor on begin of 1ine
+	CNC	SSETC	; Cursor on begin of line
 	CC	SMVTXT	; Find old text and move it
 	POP	D
 	LHLD	SCTOP	; Get addr after header
@@ -16687,7 +16697,7 @@ SSMA	STC
 	POP	PSW
 	CNZ	SGINIT	; Blank visible graph area
 	LHLD	SCE	; Get addr end of screen
-	LDA	GAL	; Get nr saved graphics 1ines
+	LDA	GAL	; Get nr saved graphics lines
 	MOV	C, A	; in C
 	CNZ	SGINIT	; Blank saved graph area
 	LXI	D, COLMT	; Addr text colour table
@@ -16854,7 +16864,7 @@ SGINIT	PUSH	PSW
 ; Mode 1/2 and 5/6 only
 ;
 	RAR
-	MVI	H, $0B	; Low def fields/1ine
+	MVI	H, $0B	; Low def fields/line
 	MVI	A, $03	; Low def bit mask
 	JNC	@E5E2	; Jump if mode 1/2
 ;
@@ -16866,17 +16876,17 @@ SGINIT	PUSH	PSW
 ;
 ; Mode 3/4 only
 ;
-@E5DE	MVI	H, $16	; High def fields/1ine
+@E5DE	MVI	H, $16	; High def fields/line
 	MVI	A, $11	; High def bit mask
 ;
 @E5E2	ORA	L	; Add def bits to get mode code
 	MOV	B, A
 	MOV	A, H	; Line length in A
 	POP	H	; Get top of area
-@E5E6	PUSH	PSW	; Save 1ine length
-	MOV	M, B	; Load 1ine control byte
+@E5E6	PUSH	PSW	; Save line length
+	MOV	M, B	; Load line control byte
 	DCX	H
-	MVI	M, $40	; Null 1ine col our byte
+	MVI	M, $40	; Null line col our byte
 	DCX	H
 @E5EC	MOV	M, E	; Load screen data locations with 1 blank field
 	DCX	H
@@ -16894,7 +16904,7 @@ SGINIT	PUSH	PSW
 ; * INITIALISE HEADER / TRAILER *
 ; *******************************
 ;
-; Sets up 4 background colour 1ines which can act as header/trailer.
+; Sets up 4 background colour lines which can act as header/trailer.
 ; Sets up colours in colour RAM. The header/trailer area consists of 4 groups of
 ; 4 bytes: 00 00 xx 3y, in which xx is the colour and 3x the mode word:
 ;    y=6: Header
@@ -16965,8 +16975,8 @@ SSUBL	PUSH	PSW
 ; *****************************
 ;
 ; Locates the 1ast few lines of text on the screen. If the screen was in split mode, the
-; whole contents of the old screen is located. If it was mode 0, the 1ast few 1ines above
-; and the cursor 1ine are located. The text is then moved to a required position, including
+; whole contents of the old screen is located. If it was mode 0, the 1ast few lines above
+; and the cursor line are located. The text is then moved to a required position, including
 ; the cursor, etc.
 ;
 ; Entry: HL: points to address where the text to be put
@@ -16982,12 +16992,12 @@ SMVTXT	PUSH	PSW
 	PUSH	H	; on stack
 	XCHG		; and in DE
 	LXI	H, $FDE8	; Length split screen char area
-	DAD	D	; Calc 1st 1ine mode byte outside screen frame
+	DAD	D	; Calc 1st line mode byte outside screen frame
 	XCHG		; in DE
 	LHLD	CURSOR	; Get cursor pos addr
 	CALL	COMP_	; Check if cursor is still inside frame
 	JC	@E675	; Jump if not
-	XCHG		; HL is addr 1st 1ine mode outside screen frame
+	XCHG		; HL is addr 1st line mode outside screen frame
 	POP	D	; DE is prev start char
 @E64F	PUSH	H	; Save end preserved text area
 	LHLD	CURSOR	; Get cursor pos addr
@@ -17001,7 +17011,7 @@ SMVTXT	PUSH	PSW
 	LHLD	LNSTR	; Get old start line pointer
 	CALL	SUBDE_	; HL=HL-DE
 	DAD	B	; Calc new cursor pos
-	CALL	SSETL	; Store addr 1ine mode byte current 1ine and last addr on that 1ine
+	CALL	SSETL	; Store addr line mode byte current line and last addr on that line
 	POP	H	; Get end preserved text area
 	CALL	SUBDE_	; HL=HL-DE
 	DAD	B
@@ -17010,16 +17020,16 @@ SMVTXT	PUSH	PSW
 	POP	PSW
 	RET
 ;
-; Scroll frame 1 1ine if cursor outside frame
+; Scroll frame 1 line if cursor outside frame
 ;
 @E675	POP	H
 	LHLD	LNSTR	; Get start addr cursor line
 	LXI	D, $FF7A
-	DAD	D	; HL: start 1ine after cursor
+	DAD	D	; HL: start line after cursor
 	PUSH	H
 	LXI	D, $0218
-	DAD	D	; Subtract 4 1ines and get
-	XCHG		; 1ine mode byte in DE
+	DAD	D	; Subtract 4 lines and get
+	XCHG		; line mode byte in DE
 	POP	H	; Get end reqd area
 	JMP	@E64F
 ;
@@ -17030,26 +17040,26 @@ SMVTXT	PUSH	PSW
 ; Sets the cursor at the beginning of a line.
 ; Several painters are updated.
 ;
-; SSETC: given a pointer to the start of 1ine, sets start and end line variables and places
-;        the cursor at the beginning of the 1ine.
-; SSETL: sets only start and end 1ine positions
+; SSETC: given a pointer to the start of line, sets start and end line variables and places
+;        the cursor at the beginning of the line.
+; SSETL: sets only start and end line positions
 ;
-; Entry: HL: address 1ine mode byte current line
+; Entry: HL: address line mode byte current line
 ; EXit:  ABCDEHL preserved
 ;
 SSETC	PUSH	PSW
 	PUSH	D
 	PUSH	H
 	LXI	D, $FFF8
-	DAD	D	; Get addr 1st data byte on current 1ine
+	DAD	D	; Get addr 1st data byte on current line
 	CALL	CURSET	; Put cursor on screen
 	XRA	A
-	STA	LCONT	; No extended 1ines
+	STA	LCONT	; No extended lines
 	POP	H
 	POP	D
 	POP	PSW
 SSETL	PUSH	PSW
-	SHLD	LNSTR	; Store addr line mode byte current 1ine
+	SHLD	LNSTR	; Store addr line mode byte current line
 	MVI	A, $80	; Calc 1obyte last addr on this line
 	ADD	L
 	STA	LNEND	; Store it in LNEND
@@ -17250,7 +17260,7 @@ SDRAW	ORA	A
 	PUSH	H
 	CALL	ARGCHK	; Check arguments, set colour
 	PUSH	PSW
-	CALL	COMP_	; Check direction of 1ine
+	CALL	COMP_	; Check direction of line
 	MVI	A, $00	; Set 'no X, Y swap'
 	JNC	@E72E	; Jump if X > Y
 ;
@@ -17265,7 +17275,7 @@ SDRAW	ORA	A
 	MOV	D, A	; Offset in field in D
 	POP	PSW	; Get Y-pos left end
 	PUSH	H	; Save X 1ength
-	CALL	SMEMMK	; Pntr to start of 1ine in screen RAM
+	CALL	SMEMMK	; Pntr to start of line in screen RAM
 	XTHL
 	PUSH	D	; Save offset
 	PUSH	H	; Save DX
@@ -17410,14 +17420,14 @@ SDRAW	ORA	A
 ; direction depends on DIRN1 (DIRN1)
 ;
 ; Entry: HL: pointer
-;        B:  number of 1ines
+;        B:  number of lines
 ; Exit:  HL updated
 ;        AFBCDE preserved
 ;
 UPDTP	PUSH	PSW
 	PUSH	D
 	PUSH	H
-	LDA	GXB	; Get number bytes/1ine
+	LDA	GXB	; Get number bytes/line
 	MOV	L, A	; Store it in HL
 	MVI	H, $00
 	MOV	A, B	; Get nr of lines
@@ -17947,8 +17957,8 @@ FILBK	PUSH	B
 	INR	D
 	JZ	@EA53	; Abort if ready
 	DCR	D	; Update Y-count
-	CALL	DADCK	; Update pntr to next 1ine
-	JMP	@EA17	; Next 1ine
+	CALL	DADCK	; Update pntr to next line
+	JMP	@EA17	; Next line
 ;
 ; If 16-colour mode
 ;
@@ -18031,7 +18041,7 @@ FILST	PUSH	B
 	JZ	@EABC	; Jump if ready
 	XTHL
 	CALL	DADCK	; Update pointer
-	JMP	@EA79	; Next 1ine
+	JMP	@EA79	; Next line
 ;
 ; If animate
 ;
@@ -18063,7 +18073,7 @@ FILST	PUSH	B
 	DCR	D
 	ORA	A
 	JZ	@EABD
-	CALL	DADCK	; Next 1ine
+	CALL	DADCK	; Next line
 	JMP	@EAAD	; Next field
 ;
 ; 1f ready
@@ -18078,13 +18088,13 @@ FILST	PUSH	B
 ; * MOVE AND CHECK POINTER *
 ; **************************
 ;
-; DADCK: Moves a pointer 1 1ine up screen and offsets to alternate area if necessary
+; DADCK: Moves a pointer 1 line up screen and offsets to alternate area if necessary
 ; PTRCK: Checks a memory pointer and moves it into or out of the archive area if necessary
 ;
 ; Exit: H: new pointer
 ;
-DADCK	LDA	GXB	; Get nr bytes/1ine
-	CALL	DADA_	; Add 1 1ine length
+DADCK	LDA	GXB	; Get nr bytes/line
+	CALL	DADA_	; Add 1 line length
 PTRCK	PUSH	B
 	PUSH	D
 	XCHG
@@ -18314,7 +18324,7 @@ SMEMMK	PUSH	D
 	MOV	L, H	; Entry A in L
 	MVI	H, $00
 	INX	H	; +1
-	LDA	GXB	; Get nr bytes/1ine
+	LDA	GXB	; Get nr bytes/line
 	CALL	HLMUL_	; Calc HL = A * HL
 	CALL	SUBDE_	; HL = HL - DE
 	XCHG		; Result in DE
@@ -18442,7 +18452,7 @@ EWUP	PUSH	D
 	STA	v_CURPT+1	; Clear cursor pos in buffer
 	LDA	v_ECURY	; Get Y-offset cursor in in document
 	SUB	L	; Minus offset top of window
-	CPI	$17	; Nr of 1ines in window -1
+	CPI	$17	; Nr of lines in window -1
 	CZ	ECUP	; Cursor up if at bottom of window
 	LHLD	CURSOR	; Get cursor pos addr
 	PUSH	H
@@ -18450,7 +18460,7 @@ EWUP	PUSH	D
 	CALL	LEC74	; Move window, correct pntrs
 	POP	H
 LEC6E	LXI	D, $FF7A	; Length one line
-	JMP	LECD5	; Put cusor on next 1ine, quit with CY=1
+	JMP	LECD5	; Put cusor on next line, quit with CY=1
 ;
 ; SCROLL EDIT DISPLAY DOWN ONE LINE
 ;
@@ -18459,12 +18469,12 @@ LEC6E	LXI	D, $FF7A	; Length one line
 ;
 LEC74	PUSH	B
 	LXI	B, GRR	; Length one screen line
-	CALL	LEC86	; Move window up in text 1 1ine
+	CALL	LEC86	; Move window up in text 1 line
 	PUSH	D
 	LHLD	v_EWINY	; Get offset of top of window
 	DCX	H	; -1
 	SHLD	v_EWINY	; And preserve it
-	JMP	LECEF	; Print new 1ine of text at window botton
+	JMP	LECEF	; Print new line of text at window botton
 ;
 ; ***********************
 ; * MOVE WINDOW IN TEXT *
@@ -18484,14 +18494,14 @@ LEC86	LHLD	CHE	; Get addr after end char area
 ;
 ; Move full screen
 ;
-@EC8D	LXI	B, $0006	; 3 not used 1ocations at 1ine end
+@EC8D	LXI	B, $0006	; 3 not used 1ocations at line end
 	DAD	B	; Add it to both HL and DE and exchange DE and HL
 	XCHG
 	DAD	B
 	XCHG
-	MVI	B, 60	; 60 char/1ine visible
+	MVI	B, 60	; 60 char/line visible
 ;
-; Move on 1ine
+; Move on line
 ;
 @EC96	INX	H
 	INX	H	; New destination pntr
@@ -18510,7 +18520,7 @@ LEC86	LHLD	CHE	; Get addr after end char area
 	CALL	COMP_	; Compare HL-DE
 	XCHG		; New origin in DE
 	POP	H	; Destination in HL
-	JC	@EC8D	; Evt another 1ine
+	JC	@EC8D	; Evt another line
 	RET
 ;
 ; ***************
@@ -18546,8 +18556,8 @@ EWDN	PUSH	D
 	CALL	CURDEL	; Delete cursor
 	CALL	LECDF	; Scroll edit display up one line
 	POP	H
-LECD2	LXI	D, GRR	; Length one screen 1ine
-LECD5	DAD	D	; One 1ine further
+LECD2	LXI	D, GRR	; Length one screen line
+LECD5	DAD	D	; One line further
 LECD6	CALL	CURSET	; Put new cursor on screen
 	STC		; Exit CY=1 if cursor moved
 LECDA	POP	H
@@ -18562,16 +18572,16 @@ LECDA	POP	H
 ;       AFDEHL corrupted
 ;
 LECDF	PUSH	B
-	CALL	SCROLL	; Scroll window up 1 1ine
+	CALL	SCROLL	; Scroll window up 1 line
 	PUSH	H
 	LHLD	v_EWINY	; Get offset of top of window
 	INX	H	; +1
 	SHLD	v_EWINY	; Preserve it
-	LXI	D, $0017	; Nr of 1ines for window
-	DAD	D	; HL pnts to new 1ine at window bottom
-LECEF	CALL	LEE1C	; Skip 1ines
+	LXI	D, $0017	; Nr of lines for window
+	DAD	D	; HL pnts to new line at window bottom
+LECEF	CALL	LEE1C	; Skip lines
 	POP	D
-	CALL	LEEC0	; Print new 1ine of text
+	CALL	LEEC0	; Print new line of text
 	POP	B
 	RET
 ;
@@ -18623,7 +18633,7 @@ LED2E	MOV	B, A	; Offset right side of window in B
 	DAD	D	; Pos 60th char on screen
 	XCHG		; in DE
 	LHLD	v_EWINY	; Get offset of top of window
-	CALL	LEE1C	; Skip 1ines
+	CALL	LEE1C	; Skip lines
 ;
 ; Put newly visible 60th character on screen
 ;
@@ -18631,12 +18641,12 @@ LED2E	MOV	B, A	; Offset right side of window in B
 	STAX	D	; Next visible char in window
 	CALL	LEE38	; Next line
 	PUSH	H
-	LXI	H, $FF7A	; -86 (1ength one 1ine)
+	LXI	H, $FF7A	; -86 (1ength one line)
 	DAD	D	; Pnts to 60th char on next line
 	XCHG
 	POP	H
 	DCR	C	; Update line count
-LED4B	JNZ	@ED3C	; Scroll next 1ine if not ready
+LED4B	JNZ	@ED3C	; Scroll next line if not ready
 	POP	B
 	RET
 ;
@@ -18681,7 +18691,7 @@ LED74	PUSH	B
 	LDA	v_EWINX	; Get offset of left side of window
 	DCR	A	; -1
 	STA	v_EWINX	; Preserve it
-	LXI	D, $FFF8	; Gives in ED2E 1st pos on 1st screen 1ine
+	LXI	D, $FFF8	; Gives in ED2E 1st pos on 1st screen line
 	JMP	LED2E	; Scroll display left
 ;
 ; *************
@@ -18728,13 +18738,13 @@ ECDN	PUSH	D
 	LHLD	v_ECURY	; Get Y-offset cursor in document
 	INX	H	; +1
 	PUSH	H	; Preserve it
-	CALL	LEE1C	; Skip 1ines
+	CALL	LEE1C	; Skip lines
 	POP	H
-	JNC	LECDA	; No move if cursor at 1ast 1ine of text; CY=0
+	JNC	LECDA	; No move if cursor at 1ast line of text; CY=0
 	XRA	A
 	STA	v_CURPT+1	; Clear cursor pos in buffer
 	LDA	v_EWINY	; Get offset of top of window
-	ADI	$18	; 24 1ines in window
+	ADI	$18	; 24 lines in window
 	CMP	L	; Cursor at window bottom?
 	CZ	EWDN	; Then window down
 	SHLD	v_ECURY	; Store Y-offset cursor in document
@@ -18793,7 +18803,7 @@ ECRT	PUSH	D
 	JZ	LECDA	; Then quit with CY=0
 	CMP	L	; End of window reached?
 	CZ	EWRT	; Then window right
-	INR	A	; Iner cursor pos on 1ine
+	INR	A	; Iner cursor pos on line
 	STA	v_ECURX	; Store X-offset of cursor in document
 	XRA	A
 	STA	v_CURPT+1	; Clear cursor pos in buffer
@@ -18806,7 +18816,7 @@ ECRT	PUSH	D
 ; *****************************
 ;
 ; Entry: HL: number of lines to be skipped
-; Exit:  HL: points to 1st not skipped 1ine
+; Exit:  HL: points to 1st not skipped line
 ;        CY=1: OK
 ;        CY=0: end of text reached before count is zero
 ;        ABCDE preserved
@@ -18818,7 +18828,7 @@ LEE1C	PUSH	D
 @EE22	MOV	A, D	; Abort with CY=1 if ready
 	ORA	E
 	JZ	@EE33
-	CALL	LEE38	; Next 1ine
+	CALL	LEE38	; Next line
 	NOP
 	ORA	A
 	JZ	@EE34	; Abort with CY=0 if end of buffer reached before DE=0
@@ -18834,8 +18844,8 @@ LEE1C	PUSH	D
 ; * NEXT LINE *
 ; *************
 ;
-; Entry: HL: points to text, each 1ine ended by a car.ret, last line followed by 0.
-; Exit:  HL: points to next 1ine.
+; Entry: HL: points to text, each line ended by a car.ret, last line followed by 0.
+; Exit:  HL: points to next line.
 ;        A:  0 if end cf text reached, else CR
 ;        BCDE preserved
 ;
@@ -18852,7 +18862,7 @@ LEE38	MOV	A, M	; Get char from text
 ; ****************************************
 ;
 ; Exit: CY=1: HL: (v_CURPT+1/AE) = cursor position in buffer
-;       CY=0: HL: points to cursor 1ine in the edit buffer
+;       CY=0: HL: points to cursor line in the edit buffer
 ;       ABCDE preserved
 ;
 LEE44	LHLD	v_CURPT	; Get pntr to cursor pos in buffer
@@ -18863,24 +18873,24 @@ LEE44	LHLD	v_CURPT	; Get pntr to cursor pos in buffer
 	PUSH	D
 	PUSH	B
 	PUSH	PSW
-	LHLD	v_ECURY	; Get Y-offset of cursor in document (no 1ines to be skipped)
+	LHLD	v_ECURY	; Get Y-offset of cursor in document (no lines to be skipped)
 	MOV	D, H	; in DE
 	MOV	E, L
-	CALL	LEE1C	; Skip 1ines
+	CALL	LEE1C	; Skip lines
 	SHLD	v_CURLB	; Store pntr to start cursor line in buffer
 	PUSH	H	; and preserve it
 	LHLD	v_EWINY	; Get offset of top of window
 	CALL	SUBDE_	; Calc difference
-	MVI	A, $86	; Length one 1ine
+	MVI	A, $86	; Length one line
 	CALL	HLMUL_	; Calc total length
 	XCHG		; Result in DE
 	LHLD	CHS	; Get startaddr char area
 	DAD	D	; Add offset
-	SHLD	v_CURLS	; Preserve pntr to start cursor 1ine on screen
-	POP	H	; Get pntr to start cursor 1ine in buffer
+	SHLD	v_CURLS	; Preserve pntr to start cursor line on screen
+	POP	H	; Get pntr to start cursor line in buffer
 	LDA	v_ECURX	; Get X-offset of cursor in document
 	MOV	B, A	; in B
-	CALL	LEE7B	; Skip to Bth pos on 1ine exit: HL pnts to cursor pos
+	CALL	LEE7B	; Skip to Bth pos on line exit: HL pnts to cursor pos
 	POP	B
 	MOV	A, B
 	POP	B
@@ -18894,8 +18904,8 @@ LEE44	LHLD	v_CURPT	; Get pntr to cursor pos in buffer
 ;
 ; Looks through a textline until Bth position is found. On exit, character on this position is in A.
 ;
-; Entry: HL: start text 1ine
-;        B:  number of position in 1ine
+; Entry: HL: start text line
+;        B:  number of position in line
 ; Exit:  CY=0: position found:
 ;              A:  character on that position
 ;              HL: points to Bth position
@@ -18926,7 +18936,7 @@ LEE82	JZ	@EEA3	; Abort if Bth pos reached
 	CMP	C	; Compare with tab stops
 	JNC	@EE94	; Continue if not past tab
 ;
-; If end of 1ine or end of text reached or if past tab
+; If end of line or end of text reached or if past tab
 ;
 @EEA0	MVI	A, ' '	; Set char is space
 	STC		; Abort with CY=1
@@ -18960,7 +18970,7 @@ LEEA6	PUSH	PSW
 	MOV	A, C	; Line pos in A
 	CMP	B
 	JNC	@EEAC	; Get next tab if line pos > tab stop
-@EEBA	MOV	C, B	; Replace line pos by tab stop or by 1ine pos +1 if no tab found
+@EEBA	MOV	C, B	; Replace line pos by tab stop or by line pos +1 if no tab found
 	POP	H
 	POP	PSW
 	MOV	B, A
@@ -18972,12 +18982,12 @@ LEEA6	PUSH	PSW
 ; ********************************
 ;
 ; Entry: HL:    address of textline in buffer
-;        DE:    line control byte of screen 1ine to print text on
+;        DE:    line control byte of screen line to print text on
 ;        v_EWINX: number of non-printing positions
 ;
 ; During execution loop:
 ;        B:   nr of non-printing pos left +1
-;        C:   nr of screen 1ine pos left
+;        C:   nr of screen line pos left
 ;        D:   current text line position
 ;        E:   count of blanks inserted
 ;        HL:  points to text
@@ -18992,7 +19002,7 @@ LEEC0	PUSH	B
 	INR	A
 	MOV	B, A	; B is offset +1
 	MVI	C, 60	; 60 visible characters
-	PUSH	D	; Preserve start screen 1ine
+	PUSH	D	; Preserve start screen line
 	MVI	D, $00	; Init current text pos and blanks count
 	MOV	E, D
 ;
@@ -19022,12 +19032,12 @@ LEEEC	DCR	E	; Update blanks count
 	DCX	H
 	DCX	H	; Next screen pos
 	XTHL		; Preserve it
-	DCR	C	; End of screen 1ine reached?
+	DCR	C	; End of screen line reached?
 	JNZ	LEED2	; Next char if not
-	CALL	LEE38	; Else: next 1ine
+	CALL	LEE38	; Else: next line
 	XTHL		; HL is screen pos
 	LXI	D, $FFFA
-	DAD	D	; HL is ist useable pos on next 1ine
+	DAD	D	; HL is ist useable pos on next line
 	XCHG		; into DE
 	POP	H
 	POP	B
@@ -19036,7 +19046,7 @@ LEEEC	DCR	E	; Update blanks count
 ; Tab-handling
 ;
 LEF08	PUSH	B
-	MOV	C, D	; C is pos on current 1ine
+	MOV	C, D	; C is pos on current line
 	CALL	LEEA6	; Tabulate
 	MOV	A, C	; Next tab stop in A
 	SUB	D	; Calc blanks to be inserted
@@ -19051,11 +19061,11 @@ LEF08	PUSH	B
 ; ***************************
 ;
 ; Text is printed in window from (DE) to bottom text screen if text ends.
-; A ASCII 0 (vertical bar) is printed at the beginning of al1 following 1ines.
+; A ASCII 0 (vertical bar) is printed at the beginning of al1 following lines.
 ;
 ; Entry: HL: points to text
-;        DE: points to line control byte screen 1ine
-; Exit:  HL: points to next 1ine to print
+;        DE: points to line control byte screen line
+; Exit:  HL: points to next line to print
 ;        DE: bottom text screen
 ;        AF  corrupted
 ;        BC  preserved
@@ -19082,15 +19092,15 @@ LEF29	PUSH	PSW
 	PUSH	H
 	LHLD	v_CURLS	; Get pntr to start cursor line on screen
 	XCHG		; in DE
-	LHLD	v_CURLB	; Get pntr to start cursor 1ine in buffer
-	CALL	LEEC0	; Print a text 1ine
+	LHLD	v_CURLB	; Get pntr to start cursor line in buffer
+	CALL	LEEC0	; Print a text line
 	JMP	XRET	; Popall, ret
 ;
 ; *********************
 ; * PRINT FULL SCREEN *
 ; *********************
 ;
-; Prints from Nth 1ine in full screen window. N is the offset of the top of the window from
+; Prints from Nth line in full screen window. N is the offset of the top of the window from
 ; the start of the edit buffer.
 ;
 ; Exit: all registers preserved
@@ -19102,7 +19112,7 @@ LEF3A	PUSH	PSW
 	LHLD	CHS	; Get startaddr char area
 	XCHG		; in DE
 	LHLD	v_EWINY	; Get offset of top of window
-	CALL	LEE1C	; Skip 1ines
+	CALL	LEE1C	; Skip lines
 	JMP	LCE85	; Print complete window
 ;
 ; ******************************
@@ -19171,7 +19181,7 @@ LEF9C	XRA	A
 	STA	v_ECURX
 	STA	v_CURPT+1
 	CALL	LEF3A	; Reprint full screen
-	LHLD	v_CURLS	; Get pntr to start cursor 1ine on screen
+	LHLD	v_CURLS	; Get pntr to start cursor line on screen
 	LXI	D, $FFF8
 	DAD	D	; New cursor addr
 	CALL	CURSET	; Put cursor on screen
@@ -19183,8 +19193,8 @@ LEF9C	XRA	A
 LEFB9	CALL	ECRT	; Move cursor right
 	LDA	v_ECURX	; Get X-offset of cursor in document
 	MOV	B, A	; in B
-	LHLD	v_CURLB	; Get pntr to start cursor 1ine in buffer
-	CALL	LEE7B	; Skip to Bth pos on 1ine
+	LHLD	v_CURLB	; Get pntr to start cursor line in buffer
+	CALL	LEE7B	; Skip to Bth pos on line
 	JC	LEFB9	; Again
 	JMP	LEF95	; Abort with CY=1
 ;
@@ -19225,7 +19235,7 @@ EDLCH	PUSH	B
 	XCHG		; restore original HL
 	CALL	MOVES	; Move screen area above downwards
 	CPI	$0D	; Deleted car.ret?
-	CNZ	LEF29	; If not: reprint text 1ine
+	CNZ	LEF29	; If not: reprint text line
 	CZ	LEF3A	; Else: reprint full screen
 	JMP	LCEF2	; Put cursor on screen, abort with CY=1
 ;
@@ -19254,7 +19264,7 @@ bgn_rom3	.equ	*
 ; * ENTRYPOINTS *
 ; ***************
 ;
-ELINE	JMP	LE024	; Encode a BASIC 1ine
+ELINE	JMP	LE024	; Encode a BASIC line
 ELN	JMP	ELNR	; Encode a linenr
 ETCON	JMP	LE145	; Encode a constant
 LWSTART	JMP	UT_RESET	; Start utility package
@@ -19268,7 +19278,7 @@ L3E394	JMP	LE935	; Get inputs from keyb or DINC
 ;     ================
 ;
 ; Generally in the encoding routines, HL points to the first free 1ocation in the EBUF.
-; C points to the input text 1ine.
+; C points to the input text line.
 ;
 ; ***********************
 ; * UPDATE EBUF POINTER *
@@ -19337,14 +19347,14 @@ LE024	PUSH	D
 	CALL	INXCH	; Update EBUF pointer
 	RET		; Go to encoding instruction return afterwards to @E04F
 ;
-; End of encoding of an input 1ine (after running the command specific processing).
+; End of encoding of an input line (after running the command specific processing).
 ; Checks if character after BASIC command is CR o ':'.
 ;
 ; Entry: C: points to position on current line.
 ;        On stack: Original DE.
 ;
 @E04F	POP	D	; Get type of command in D
-	CALL	IGNB	; Get char from 1ine, neglect tab + space
+	CALL	IGNB	; Get char from line, neglect tab + space
 	INR	C	; Pntr to next char
 	CPI	':'	; ':'?
 	JZ	LE024	; Then encode next instr
@@ -19443,11 +19453,11 @@ EIF	PUSH	H
 ;
 ; Encode 'THEN'
 ;
-LE0C7	CALL	LE731	; Read a 1inenr into EBUF
+LE0C7	CALL	LE731	; Read a linenr into EBUF
 	POP	D
 	JNC	LE0D4	; Jump if no linenr given
 ;
-; If 1inenr
+; If linenr
 ;
 	XTHL
 	DCX	H
@@ -19511,7 +19521,7 @@ ELET	CALL	LE5BC	; Encode var or array ref
 ; * ENCODE 'INPUT' AND 'INPUT <STRING>' *
 ; ***************************************
 ;
-EINPUT	CALL	IGNB	; Get char from 1ine, neglect tab + space
+EINPUT	CALL	IGNB	; Get char from line, neglect tab + space
 	CPI	'"'	; "?
 	JNZ	EREAD	; Encode 'READ' if no string in INPUT statement
 ;
@@ -19544,10 +19554,10 @@ LE12A	PUSH	H
 	INR	M	; Count in EBUF +1
 	XTHL
 	CALL	IGNB	; Get char from line, neglect tab + space
-	INR	C	; Points to next char on 1ine
+	INR	C	; Points to next char on line
 	CPI	','	; ','?
 	JZ	@E130	; Again if more items
-	DCR	C	; Correct 1ine pointer
+	DCR	C	; Correct line pointer
 	INX	SP
 	INX	SP	; SP to returnaddr
 	RET
@@ -19564,7 +19574,7 @@ LE145	PUSH	PSW	; Preserve type
 ;
 ; If STR type
 ;
-	CALL	IGNB	; Get char from 1ine, neglect tab + space
+	CALL	IGNB	; Get char from line, neglect tab + space
 	CPI	'"'	; quoted string?
 	PUSH	PSW
 	CZ	LE880	; Then store quoted string 1n EBUF
@@ -19620,7 +19630,7 @@ LE180	XTHL
 	XTHL
 LE185	XTHL
 	POP	H
-	LXI	D, ELNR	; Addr routine 'get 1inenr'
+	LXI	D, ELNR	; Addr routine 'get linenr'
 	JMP	LE12A	; Continue encoding
 ;
 ; Table
@@ -19656,7 +19666,7 @@ EPRINT	PUSH	H
 	JZ	@E1C4	; Then continue
 	CPI	';'	;' ';'?
 	JNZ	ERRSN	; Run 'SYNTAX ERROR' if not
-@E1C4	INR	C	; Update 1ine pntr
+@E1C4	INR	C	; Update line pntr
 	CALL	TSEOC	; Next char ':' or 'CR'?
 	JNZ	@E1A8	; Continue if not
 ;
@@ -19670,7 +19680,7 @@ EPRINT	PUSH	H
 ; *****************
 ;
 EMODE	MVI	D, $FF	; Default mode 0
-	CALL	IGNB	; Get char from 1ine, neglect tab + space
+	CALL	IGNB	; Get char from line, neglect tab + space
 	INR	C	; Points to nex t char
 	SUI	'0'
 	JZ	@E1F1	; If char is '0': $FF in EBUF
@@ -19680,7 +19690,7 @@ EMODE	MVI	D, $FF	; Default mode 0
 	DCR	A	; Calc code for mode in D
 	ADD	A
 	MOV	D, A
-	CALL	EFETCH	; Get next char from 1ine
+	CALL	EFETCH	; Get next char from line
 	CPI	'A'	; 'A'?
 	JNZ	@E1F1	; Jump if not
 	INR	C	; Points to next char
@@ -19734,8 +19744,8 @@ EENV	CALL	LE36D	; Encode ENV nr
 ; Checks the expression after the token and updates the token on it.
 ; On exit the token is:
 ;                    EDIT    LIST
-; Without 1inenr:    B6      93
-; One 1ine:          B7      94
+; Without linenr:    B6      93
+; One line:          B7      94
 ; Part of program:   B8      95
 ;
 ; Entry: HL: points after token in EBUF
@@ -19750,12 +19760,12 @@ EEDIT	DCX	H	; Pnts to token
 	INX	H
 	CALL	TSEOC	; Next char ':' or 'CR'?
 	JZ	@E244	; Then ready
-	CALL	LE248	; Read 1inenr into EBUF
+	CALL	LE248	; Read linenr into EBUF
 	INR	D	; Token +1
 	CALL	TSEOC	; Next char ':' or 'CR'?
 	JZ	@E244	; Then ready
 	CALL_B(ECHRI, '-')	; Next char '-'?
-	CALL	LE248	; Read 1inenr into EBUF
+	CALL	LE248	; Read linenr into EBUF
 	INR	D	; Again token +1
 @E244	XTHL
 	MOV	M, D	; Token into EBUF
@@ -19764,7 +19774,7 @@ EEDIT	DCX	H	; Pnts to token
 ;
 ; READ LINENUMBER INTO EBUF
 ;
-; Reads a linenumber from the input line into the EBUF. If no 1inenumber is given, $0000 is inserted.
+; Reads a linenumber from the input line into the EBUF. If no linenumber is given, $0000 is inserted.
 ;
 ; Entry: HL: points to 1st free location in EBUF
 ;        C:  points to input line
@@ -19773,7 +19783,7 @@ EEDIT	DCX	H	; Pnts to token
 ;        BDE preserved
 ;
 LE248	PUSH	D
-	CALL	LE731	; Read 1inenr into EBUF
+	CALL	LE731	; Read linenr into EBUF
 	POP	D
 	RC		; Ready if nr given
 	MVI	M, $00	; $00 into EBUF
@@ -19835,12 +19845,12 @@ EDOT	CALL	ENC_ICI	; Encode <INT expr>, <INT expr>
 ERUN	CALL	TSEOC	; Next char ':' or 'CR'?
 	RZ		; Then ready
 ;
-; If 'RUN <1inenr>'
+; If 'RUN <linenr>'
 ;
 	DCX	H
 	INR	M	; Token +1 ($88)
 	INX	H
-	JMP	ELNR	; Get 1inenr into EBUF
+	JMP	ELNR	; Get linenr into EBUF
 ;
 ; ****************
 ; * ENCODE 'IMP' *
@@ -19860,10 +19870,10 @@ EIMP	PUSH	H
 	JZ	@E2B9	; Then jump
 	CALL	TSEOC	; IMP INT/FPT alone?
 	JZ	@E2D9	; Then ready
-@E2B9	CALL	EALPHA	; Get char from 1ine; check if uppe case; INR C
+@E2B9	CALL	EALPHA	; Get char from line; check if uppe case; INR C
 	PUSH	PSW	; Save char 1n IMP instruction
 	CALL_B(ECHRI, '-')	; Next char is '-'?
-	CALL	EALPHA	; Get next char from 1ine; check if upper case; INR C
+	CALL	EALPHA	; Get next char from line; check if upper case; INR C
 	LXI	H, IMPTAB-$41	; Base addr IMP table
 	MOV	D, H	; into DE
 	MOV	E, L
@@ -19886,9 +19896,9 @@ EIMP	PUSH	H
 	LXI	H, IMPTAB+26	; Addr after end table
 	JMP	@E2D4	; Fill A-Z with reqd type
 ;
-; Get character from 1ine and check if it is a upper case character
+; Get character from line and check if it is a upper case character
 ;
-EALPHA	CALL	IGNB	; Get char from 1ine, neglect tab + space
+EALPHA	CALL	IGNB	; Get char from line, neglect tab + space
 	CALL	ALPHA	; Check if upper case char
 	JNC	ERRSN	; Run 'SYNTAX ERROR' if not
 	INR	C	; Update textline pntr
@@ -20060,7 +20070,7 @@ EUT	RET	; No further handling
 ; **************************
 ;
 EGOTO	.equ	*
-EGOSUB	JMP	ELNR	; Get 1inenr
+EGOSUB	JMP	ELNR	; Get linenr
 ;
 ; ************************************************
 ; * ENCODE AN EXPRESSION IF VARIABLE TYPE IS INT *
@@ -20272,7 +20282,7 @@ LE444	SHLD	HOPPT	; Set pntr place for operator
 ;                 BCDE corrupted, AF preserved
 ;
 LE455	PUSH	PSW
-	CALL	IGNB	; Get char from 1ine, neglect tab + space
+	CALL	IGNB	; Get char from line, neglect tab + space
 	CPI	'"'
 	JZ	@E49B	; Jump if char is '"'
 	CPI	'('
@@ -20300,7 +20310,7 @@ LE455	PUSH	PSW
 	CALL	INXCH	; Update EBUF pointer
 	INR	C	; Next pos in textline
 	CALL	LE3C9_	; Encode expression
-	CALL	EFETCH	; Get char from 1ine
+	CALL	EFETCH	; Get char from line
 	CPI	')'
 	JNZ	ERRSN	; 'SYNTAX ERROR' if not ')'
 	INR	C	; Next pos in textline
@@ -20353,7 +20363,7 @@ ESAVA	CALL	EARRN	; Enc. array without arguments
 ;
 ENUM	PUSH	B
 	PUSH	H
-	CALL	IGNB	; Get char from 1ine, neglect tab + space
+	CALL	IGNB	; Get char from line, neglect tab + space
 	CPI	'#'
 	JZ	LE513	; Hex if char is '#'
 	LDA	REQTYP	; Get required number type
@@ -20427,7 +20437,7 @@ LE513	MVI	M, $15	; Load $15 in EBUF
 ;           HL: points to EBUF
 ;
 EFUN	PUSH	H
-	STC		; Set 'include type 1etter'
+	STC		; Set 'include type letter'
 	CALL	RDID	; Find variable name in input allow !, %, $
 	LXI	H, FUNTB	; Addr table BASIC functions
 	CALL	LOOKX	; Find function in table
@@ -20485,7 +20495,7 @@ EFUN	PUSH	H
 ; Entry: C:  points to input
 ;        HL: Points to EBUF
 ;
-EINT	CALL	IGNB	; Get char from 1ine, neglect tab + space
+EINT	CALL	IGNB	; Get char from line, neglect tab + space
 	CPI	'-'
 	JNZ	@E585	; Junp if char is not '-'
 	INR	C
@@ -20514,7 +20524,7 @@ LE590	CALL	XHCB	; Input HEX number to MACC
 ; Error exit: CY=0:
 ;        BDEHL preserved, A corrupted, C updated
 ;
-EFPT	CALL	IGNB	; Get char from 1ine, neglect tab + space
+EFPT	CALL	IGNB	; Get char from line, neglect tab + space
 	CPI	'-'
 	JNZ	@E5A0	; Jump if char is not '-'
 	INR	C
@@ -20556,7 +20566,7 @@ LE5BB	RET
 LE5BC	MVI	D, $00
 LE5BE	PUSH	PSW
 	PUSH	D
-	CALL	IGNB	; Get 1st char from 1ine, neglet tab + space
+	CALL	IGNB	; Get 1st char from line, neglet tab + space
 	CALL	ALPHA	; Check if char is upper case
 	JNC	ERRSN	; Run "SYNTAX ERROR" if not
 	PUSH	H
@@ -20627,7 +20637,7 @@ LE5BE	PUSH	PSW
 ;
 ;  If value
 ;
-@E626	CALL	EFETCH	; Set char from 1ine
+@E626	CALL	EFETCH	; Set char from line
 	CPI	'('	; '(')?
 	CZ	LE653	; Then encode arguments
 ;
@@ -20678,7 +20688,7 @@ LE653	MVI	E, $00	; Parameter count
 	PUSH	D
 	CALL	LE3B2	; Encode non-boolean expr preceeded by its type
 	POP	D
-	CALL	IGNB	; Get char from 1ine neglect tab + space
+	CALL	IGNB	; Get char from line neglect tab + space
 	CPI	','
 	JZ	@E659	; Get next parameter if it is ','
 	CPI	')'
@@ -20759,7 +20769,7 @@ LE6A6	MVI	E, $01	; Text must end with ','
 ;
 ; Text in DATA, REM and '***' statements is moved into the EBUF.
 ;
-LE6B0	CALL	IGNB	; Get char from 1ine, neglect tab + space
+LE6B0	CALL	IGNB	; Get char from line, neglect tab + space
 	MVI	E, $02	; Text must end with CR into common end
 ;
 ; *************************************
@@ -20906,7 +20916,7 @@ RDID	PUSH	PSW	; Preserve CY-flag
 ;       AFDE corrupted
 ;       'SYNTAX ERROR' if no linenr given
 ;
-ELNR	CALL	LE731	; Read 1inenr into EBUF
+ELNR	CALL	LE731	; Read linenr into EBUF
 	JNC	ERRSN	; Run 'SYNTAX ERROR' if no number given
 	RET
 ;
@@ -20919,9 +20929,9 @@ ELNR	CALL	LE731	; Read 1inenr into EBUF
 ;       C, HL: updated
 ;       B preserved, AFDE corrupted
 ;
-LE731	CALL	IGNB	; Get char from 1ine, neg1ect tab + space
+LE731	CALL	IGNB	; Get char from line, neg1ect tab + space
 	CALL	XICB	; Input INT number to MACC
-	RNC		; Abort if no 1inenr given
+	RNC		; Abort if no linenr given
 	PUSH	B
 	ROMCALL(4, $15)	; Copy MACC into reg ABCD
 	ORA	B
@@ -21198,7 +21208,7 @@ LE835	.equ	*
 ; * CHECK STATEMENT TERMINATOR *
 ; ******************************
 ;
-; Get character from 1ine and checks if it is a correct terminator (':' or car. ret).
+; Get character from line and checks if it is a correct terminator (':' or car. ret).
 ;
 ; Exit: Z=l: correct terminator
 ;       Z=0: incorrect
@@ -21319,7 +21329,7 @@ LE8AB	INR	E
 ;
 LE8AF	MVI	M, $14	; INT coe ($14) in EBUF
 	CALL	INXCH	; Update EBUF pointer
-	JMP	IGNB	; Get char from 1ine, neglect tab + space
+	JMP	IGNB	; Get char from line, neglect tab + space
 ;
 ; *************************************************
 ; * ERROR EXIT OF ENCODE INT NR INTO EBUF (3E888) *
@@ -21336,8 +21346,8 @@ LE8B7	LXI	H, XE39F	; Addr routine 'STORE DATA'
 .if ROMVERS == 10
 LE8B7	LHLD	EFEPT	; Get EFEPT
 	LXI	D, $FFFC
-	DAD	D	; Set back 1inepntr
-	SHLD	CURRNT	; Store start current 1ine
+	DAD	D	; Set back linepntr
+	SHLD	CURRNT	; Store start current line
 	JMP	ERRSN	; Run 'SYNTAX ERROR'
 .endif
 ;
@@ -21708,7 +21718,7 @@ DISP	CALL	LCRLF	; Print car.ret
 	RC		; Quit if ready
 	CALL	UT_BREAK	; Scan for Break pressed, abort if pressed
 	MOV	A, L
-	ANI	$0F	; Last instr on 1ine?
+	ANI	$0F	; Last instr on line?
 	JZ	DISP	; Then car.ret and continue
 	JMP	@EAC4	; Next addr
 ;
