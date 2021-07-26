@@ -184,9 +184,10 @@ FPTWRK	.EQU	$00E3	;DW
 ;
 ; Number output variables
 ;
+MAXSIG	.EQU	$0A	; Max. possible signiticant figures
+FPTSIG	.EQU	$06	; Number of significant digits for FPT
+;
 DECBUF	.EQU	$00E3	; $00E3-$00F1 Decimal output buffer
-			;    MAXSIG: $0A: Max. possible signiticant figures
-			;    FPTSIG: $06: Number of significant digits for FPT
 DECBS	.EQU	$00E4	; B Sign	
 DECBD	.EQU	$00E5	; B Decimal point
 DECBF	.EQU	$00E6	;10b Digits, most significant one in $00E6
@@ -196,7 +197,7 @@ DECBP	.EQU	$00F2	; W Buffer pointer
 ; FPOLY variables
 ;
 XN	.EQU	$00E3	;DW Running power of (X^K)	
-XK	.EQU	$00E7	;DW Power mutiplier (x^J)	
+XK	.EQU	$00E7	;DW Power mutiplier (X^J)	
 SUM	.EQU	$00EB	;DW Running sum
 ;
 ; SQRT variables 

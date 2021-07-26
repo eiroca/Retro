@@ -15,7 +15,7 @@ ROMVERS	.equ	11	; 11 = BASIC v1.1
 .include	"DAI FW RAM.8080.asm"
 ;
 ; ROM Core - 8KB starting $C000 (not banked)
-.bank 0, 12, $C000
+.bank 0, 8, $C000
 .segment "ROM", 0
 .org	$C000
 ;
@@ -629,7 +629,7 @@ POF	SHLD	XPHLS	; Save HL
 ;
 ; *****************************************
 ; * INPUT A FLOATING PDINT NUMBER TO MACC *
-; *******************N*********************
+; *****************************************
 ;
 ; Converts a FPT number to binary into MACC.
 ; The input string is converted as a integer FPT
@@ -952,13 +952,13 @@ FEC	PUSH	B
 ; If exponent negative:
 ;
 @C3C4	MOV	A, C
-	CMA		; Change 10' s power
+	CMA		; Change 10's power
 	INR	A	; to neg. value
 	MOV	C, A
 @C3C8	CALL	FCOMP	; Compare with 0.1
 	JP	@C3D4	; Jump if normalized
 	ROMCALL(4, $09)	; MACC = MACC / 0.1 (FPT)
-	DCR	C	; Update 10' s power
+	DCR	C	; Update 10's power
 	JMP	@C3C8	; Cont. normalisation
 ;
 ; Load output buffer:
@@ -968,14 +968,14 @@ FEC	PUSH	B
 	POP	PSW	; Get sign byte mantissa
 	ORA	A	; Set flags on it
 	LXI	H, DECBS	; Addr output buffer
-	MVI	M, '+'	; '+'($2B) in byffer
+	MVI	M, '+'	; '+'($2B) in buffer
 	JP	@C3E4	; If mantissa is positive
 	MVI	M, '-'	; Else: '-'($2D) in buffer
 @C3E4	INX	H
 	MVI	M, '.'	; '.'($2E) in DECBD
 	INX	H
 	PUSH	H
-	ROMCALL(4, $15)	; Xopy MACC to reg A, B, C, D
+	ROMCALL(4, $15)	; Copy MACC to reg A, B, C, D
 	PUSH	PSW	; Save exp. byte
 	XRA	A
 	ROMCALL(4, $12)	; Copy mantissa to MACC
@@ -991,7 +991,7 @@ FEC	PUSH	B
 	ROMCALL(4, $72)	; Shift MACC right
 @C402	JP	@C3FC	; If not ready
 	POP	H
-	ROMCALL(4, $15)	; Copy MACC to regf A, B, C, D
+	ROMCALL(4, $15)	; Copy MACC to reg A, B, C, D
 	ADI	$30	; Exp. byte in ASCII
 	MOV	M, A	; Into outputbuffer
 	INX	H
@@ -1023,7 +1023,7 @@ LC424	PUSH	B
 	PUSH	H
 	ROMCALL(4, $15)	; Copy MACC to reg A, B, C, D
 	XRA	A	; Clear highest byte
-	ROMCALL(4, $12)	; Copy reg A, B, C, D to MACCv
+	ROMCALL(4, $12)	; Copy reg A, B, C, D to MACC
 	LXI	H, I10
 	ROMCALL(4, $54)
 	ROMCALL(4, $15)	; Copy MACC to reg A, B, C, D
@@ -1067,12 +1067,12 @@ FP9	.byte	$04, $90, $00, $00	; FPT (9.0)
 ;        A:         Nr. of useable digits in string in
 ;                   DECBUF (not counting additional digit for rounding).
 ;        DECBE:     Nr. of digits before '.' (exponent).
-;        DECBUF:     Sign '+' or '-'
-;        DECBD:     Decimal point.
-;        $E6—$F0': Digits.
+;        DECBUF:    Sign '+' or '-'
+;        DECBD:     Decimal point
+;        $E6—$F0:   Digits
 ; Exit:  All registers preserved.
-;        DECBUF:   Length of string.
-;        $E4—$F0: Output string.
+;        DECBUF:    Length of string
+;        $E4—$F0:   Output string
 ;
 ; Format: Sign in DECBUF is blank or '-'.
 ;         If exponent is 0:
@@ -1093,18 +1093,18 @@ PRTY	PUSH	PSW
 	MVI	B, $00
 	DAD	B	; HL pnt to last useable digít
 	MOV	A, M	; Get last digit
-	CPI	$35	; Check for rounding
-	JC	@C4AF	; If <5
+	CPI	'5'	; Check for rounding
+	JC	@C4AF	; If < 5
 @C498	DCX	H
 	MOV	A, M	; Get digit before
-	CPI	$39
+	CPI	'9'
 	JZ	@C4A3	; If it is 9
 	INR	M	; Rounding upwards
 	JMP	@C4AF	; Abort rounding
-@C4A3	MVI	M, $30	; Make digit before 0
+@C4A3	MVI	M, '0'	; Make digit before 0
 	DCR	C	; Decr nr of digits
 	JNZ	@C498	; Cont. check for rounding
-	MVI	M, $31	; Make nr=1 if all digits 9
+	MVI	M, '1'	; Make nr=1 if all digits 9
 	LXI	H, DECBE
 	INR	M	; Incr nr of digits before '.'
 @C4AF	POP	B
@@ -1192,17 +1192,17 @@ PRTY	PUSH	PSW
 LC51A	PUSH	PSW
 	PUSH	B
 	PUSH	D
-	LXI	H, $00F0	; Highest destination address.
+	LXI	H, DECBF+MAXSIG	; Highest destination address
 	MOV	D, H
 	MOV	E, L
-	DCX	D	; Highest source address.
-	MVI	B, $0B	; Number of bytes.
-@C525	LDAX	D	; Get byte
-	MOV	M, A	; and move it.
+	DCX	D		; Highest source address
+	MVI	B, MAXSIG+1	; Number of bytes
+@C525	LDAX	D		; Get byte
+	MOV	M, A		; and move it
 	DCX	D
 	DCX	H
 	DCR	B
-	JNZ	@C525	; Next byte if not ready
+	JNZ	@C525		; Next byte if not ready
 	POP	D
 	POP	B
 	POP	PSW
@@ -14378,11 +14378,11 @@ LEB48	MOV	A, E
 ; * SHIFT BCDE RIGHT (A) POSITIONS *
 ; **********************************
 ;
-RSHN	MVI	L, $0008	; Nr of shifts for 1 byte
+RSHN	MVI	L, $08	; Nr of shifts for 1 byte
 @EB57	CMP	L
 	JM	@EB64	; Jump if A<8
 ;
-; Shift 8 bitts right
+; Shift 8 bits right
 ;
 	MOV	E, D	; Shift 8 pos in one time
 	MOV	D, C
