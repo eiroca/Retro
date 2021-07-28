@@ -1,7 +1,4 @@
 ;
-;
-;
-;
 ; DAI FIRMWARE
 ;
 .target	"8080"
@@ -2114,7 +2111,7 @@ PROGI	LXI	H, EBUF+1	; Addr buf for encoded cmds
 	MVI	D, $40	; Mask for 'stored cmd'
 	CALL	ELINA	; Encode a line
 	MOV	A, L
-	SUI	$3F	; Length string in A
+	SUI	<EBUF + 1	; Length string in A 
 	STA	EBUF	; Length in EBUF
 	POP	D	; Get line nr
 	CALL	LDEL	; Delete old line
@@ -2139,7 +2136,7 @@ ELINA	PUSH	D
 	MVI	A, $01
 	STA	ERSFL	; Set encoding a stored line
 	ROMCALL(1, $00)	; Encode inputs
-	POP	D	; Cancel Push B,H
+	POP	D	; Cancel Push B, H
 	POP	D
 LC951	XRA	A
 	STA	ERSFL	; No encoding stored line
@@ -2413,7 +2410,7 @@ LOOKC	CALL	IGNB	; Get char from line neglect TAB and space
 	RZ		; Then abort
 	PUSH	B	; Save position of 1st char
 @CA3D	CALL	EFETCH	; Get char from line
-	INR	C	; Points to next char on iine
+	INR	C	; Points to next char on line
 	CMP	M	; Is it identical to the one in table?
 	INX	H	; Points to next char in table
 	JNZ	@CA4E	; If not identical
@@ -19307,11 +19304,11 @@ INXCH	INX	H	; Incr pointer
 ; Error exit 'COMMAND INVALID' if the 2 high order bits of the code in the table don't match
 ; the mask in D. Else the code ($80 + 1ow order 6 bits from code in table) are stored in EBUF.
 ;
-; Entry: HL: 1st free position in ERUF
+; Entry: HL: 1st free position in EBUF
 ;        D:  mask for direct command (#80) or program input (#40)
 ;        C:  position on current line
 ; Exit:  HL: updated
-;        C:  points to 1st not used input in iine
+;        C:  points to 1st not used input in line
 ;        E:  code just stored
 ;        BD preserved
 ;        AF corrupted
