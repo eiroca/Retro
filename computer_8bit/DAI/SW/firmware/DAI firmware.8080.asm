@@ -47,7 +47,7 @@ XPRTY	JMP	PRTY	; Pretties up FPT/INT number
 PDECBUF	.word	DECBUF	; Location output buffer
 ;
 ; ********************************
-; * MATH. PACKAGE INITIALISAT1ON *
+; * MATH. PACKAGE INITIALISATION *
 ; ********************************
 ;
 ; Entry: HL: Address input encoding routine ($DDE0)
@@ -185,7 +185,7 @@ LC08C	SUB	M	; Comp. exp. bytes
 	MOV	A, D
 	SUB	M	; Comp. 3rd bytes mantissa's
 LC09F	JZ	LC0A6	; Jump if not equal
-LC0A2	RAR		;  Set flags for output
+LC0A2	RAR		; Set flags for output
 LC0A3	XRA	E
 LC0A4	ORI	$01	; Clear CY-f1ag
 LC0A6	POP	H
@@ -546,7 +546,7 @@ LC1EE	PUSH	PSW
 ;
 ; *********************************************
 ; * DECREMENT FLOATING POINT NUMBER IN MEMORY *
-; *****************^***************************
+; *********************************************
 ;
 ; Routine is not used.
 ;
@@ -1233,7 +1233,7 @@ LC531	PUSH	PSW
 	POP	PSW
 	RET
 ;
-; CALCULATE NUMBER OF DIGITS FOR DUTPUT:
+; CALCULATE NUMBER OF DIGITS FOR OUTPUT:
 ;
 ; Entry: Total nr of string digits in A and C.
 ;        B: Flag for INT (0) or FPT (1)
@@ -1527,7 +1527,7 @@ HBC	PUSH	B
 	CPI	$0A
 	JC	@C680	; If 0 < digit < 9
 	ADI	$07	; Add 7 for A < digit < F
-@C680	ADI	'0'	; Convert to ASCIT
+@C680	ADI	'0'	; Convert to ASCII
 	MOV	M, A	; Into DECBUF
 	INX	H	; Incr pointer
 	CPI	'0'
@@ -1618,7 +1618,7 @@ SPT02	CALL	LCE91	; Go and set screen bits for mode 1
 ;    ==============
 ;
 ;
-; ***** *******************
+; *************************
 ; * MATH. RESTART (RST 4) *
 ; *************************
 ;
@@ -1862,7 +1862,7 @@ MERET	RET		; Return
 ;
 MEMCHK	LXI	D, $1000
 	LXI	H, $0000	; Start at $0000
-@C801	DAD	D	; Incr. with #1000
+@C801	DAD	D	; Incr. with $1000
 	MOV	A, M	; Get what is in memory
 	CMA		; Take its complement
 	MOV	M, A	; and store it back
@@ -1969,8 +1969,8 @@ LC823	LHLD	v_STACK	; Get saved stack pointeer
 ; Run a Basic line:
 ;
 LC87F	LDAX	B	; Get ist byte from EBUF:
-			; <  #80: length,
-			; >= #80: Token.
+			; <  $80: length,
+			; >= $80: Token.
 LC880	INX	B
 	ADD	A	; Calc offset from $CF00
 	JNC	LC8E5	; Jump if length byte
@@ -1984,7 +1984,7 @@ LC880	INX	B
 ;
 ; Commands return here
 ;
-ENDCOM	JC	LC8AA	; Jump 1f special action
+ENDCOM	JC	LC8AA	; Jump if special action
 ;
 ; If suspended:
 ;
@@ -2633,7 +2633,7 @@ FINDL	PUSH	B
 	JZ	@CB1D	; Abort if at end textbuf
 	MOV	A, D	; Get hibyte reqd linenr
 	CMP	M	; Test high order bits
-	JC	@CB1C	; Abort if regd nr 1ower than current one (nr > reqd)
+	JC	@CB1C	; Abort if reqd nr 1ower than current one (nr > reqd)
 	JNZ	@CAFF	; Next textline (nr < reqd)
 	INX	H	; Pnts to lobyte linenr
 	MOV	A, E	; Get 1obyte reqd linenr
@@ -2839,7 +2839,7 @@ SSTOP	BCMD("STOP", $43, ESTOP)
 SEND	BCMD("END", $44, EEND)
 SREST	BCMD("RESTORE", $C5, EREST)
 SRET	BCMD("RETURN", $46, ERET)
-SRUN	BCMD("RUN", $87, LE295)
+SRUN	BCMD("RUN", $87, ERUN)
 SGOTO	BCMD("GOTO", $49, EGOTO)
 SGOSUB	BCMD("GOSUB", $4A, EGOSUB)
 SIMP	BCMD("IMP", $B5, EIMP)
@@ -3582,7 +3582,7 @@ SHAPP	PUSH	PSW
 ; ***********************
 ;
 ; Compares two string character by character.
-; No characters >#80 are allowed.
+; No characters >$80 are allowed.
 ;
 ; Entry: DE: begin addr. 1st string
 ;        HL: begin addr. 2nd string
@@ -3602,7 +3602,7 @@ SHCOMP	PUSH	B
 	MOV	A, B
 	SUI	$01	; Check 1st string empty
 	MOV	B, A	; Save rest of bytes
-	JC	@D145	; 1f 1st string empty
+	JC	@D145	; If 1st string empty
 	MOV	A, C
 	SUI	$01	; Check 2nd string empty
 	MOV	C, A	; Save rest of bytes
@@ -3736,7 +3736,7 @@ SHREQ	PUSH	D
 ;
 ; The pointers for textbuffer and symboltable are updated correctly according to
 ; the requested Heapsize. The Heap is cleared: It starts with
-; HSIZE-4 IOR #8000 and ends with $7FFF
+; HSIZE-4 IOR $8000 and ends with $7FFF
 ;
 ; Entry: DE: HEAP size (<32K).
 ; Exit:  BC preserved. AFDEHL corrupted
@@ -3774,9 +3774,9 @@ HINIT	LHLD	TXTBGN	; Start text buffer in HL
 	MVI	M, $FF	; (end marker)
 	RET
 ;
-; ***************
-; *HEAP REQUEST *
-; ***************
+; ****************
+; * HEAP REQUEST *
+; ****************
 ;
 HREQU	ROMCALL(1, $0F)	; Run heap request
 	RET
@@ -3801,9 +3801,9 @@ XD1C8	MOV	A, E	; Get signbyte in A
 ; Prints a text line.
 ;
 LD1D1	JZ	LEEEC	; (2) If char=0
-	JP	LEEDE	; (2) Cont for char #01-7F
+	JP	LEEDE	; (2) Cont for char $01-7F
 	INX	H	; Next pos in textbuf
-	JMP	LEED2	; (2) Ignore char >= #80
+	JMP	LEED2	; (2) Ignore char >= $80
 ;
 ; *******************************************
 ; * INPUT SCANNING: CHECK SOURCE AND INPUTS *
@@ -3853,7 +3853,7 @@ LD1E8	MOV	A, B
 ;
 LD1FD	MOV	A, M	; Get char in A
 	ORA	A	; Set flags on it
-	JM	LEE94	; (2) ignore char >= #80
+	JM	LEE94	; (2) ignore char >= $80
 	MOV	A, B	; Set pos. required
 	CMP	C	; Reached?
 	MOV	A, M	; Get char
@@ -4053,7 +4053,7 @@ RLOAD	CALL	SCRATC	; Empty HEAP + symtab
 	CALL	RBLK	; Load textbuffer
 	SHLD	TXTUSE	; Store end textbutfer
 	CC	RBLK	; Load symboltable
-	CALL	LD71A	; Store end symtab; stop Ccssette motors
+	CALL	LD71A	; Store end symtab; stop cassette motors
 	POP	B
 	EI		; Enable interrupts
 	JNC	RLERR	; If 1oading error
@@ -4064,7 +4064,7 @@ RLOAD	CALL	SCRATC	; Empty HEAP + symtab
 ; * RUN LOADING ERROR *
 ; *********************
 ;
-; The program buffers are restored. A errar message is printed.
+; The program buffers are restored. A error message is printed.
 ;
 RLERR	PUSH	PSW
 	CALL	RNEW	; Run 'NEW'
@@ -4268,7 +4268,7 @@ CRBLK	PUSH	B
 	ORA	E
 	JZ	@D36F	; If whole block read
 	DCX	D
-	CALL	INSC	; Read next byte, update c.s
+	CALL	INSC	; Read next byte, update c.s.
 	JC	@D37E	; If 1oading error 3
 	MOV	M, A	; store byte in buffer
 	INX	H
@@ -4495,7 +4495,8 @@ CASST	PUSH	PSW
 ; ************************
 ; * STOP CASSETTE MOTORS *
 ; ************************
-;  Switches off cassette motors.
+;
+; Switches off cassette motors.
 ;
 ; Exit: All registers preserved
 ;
@@ -4695,7 +4696,7 @@ WBYTE	PUSH	PSW
 	PUSH	H
 	LHLD	$02E8	; Get impulse length bit '1'
 	MOV	E, H
-	MOV	D, L	; DE: inpulse length bit '0*
+	MOV	D, L	; DE: inpulse length bit '0'
 	MVI	B, $08	; 8 bits to write
 @D514	RAL		; Set/reset CY for kind of bit
 	CC	WBIT	; Write data '1' bit
@@ -4749,7 +4750,7 @@ WCYC	LDA	POROM	; POROM in A
 	ORI	$01	; 1sb = 1
 	STAX	D	; Output port is made '1'
 @D542	DCR	H
-	JNZ	@D542	; Write 1 until H=O
+	JNZ	@D542	; Write 1 until H=0
 	DCR	L
 	DCR	L
 	DCR	L	; Allow for return to WBIT
@@ -4808,9 +4809,9 @@ KLIRP	XRA	A
 	STA	KBRFL	; BREAK pointer = FF
 	RET
 ;
-; ****************************i*********
+; **************************************
 ; * KEYEOARD INTERRUPT SERVICE (RST 6) *
-; ****************************i*********
+; **************************************
 ;
 ; Current interrupt mask is saved. Only stack and clock interrupts are allowed.
 ; Keyboard timer 4 is re-loaded.
@@ -5317,7 +5318,7 @@ LD72D	CALL	SNDINI	; Init. sound generator
 ;
 ; ********************************************
 ; * part of RUN A VARIARLE REFERENCE (RARRN) *
-; ********************** *********************
+; ********************************************
 ;
 LD73D	CALL	RVR05	; (0) Run VARPTR
 	POP	D
@@ -6894,7 +6895,7 @@ OUTSE	PUSH	PSW	; Preserve char
 ; Gets inputs from RS232 via TICC. Only 7-bit Ascii-code is accepted.
 ;
 ; Entry: No conditions
-; Exit:  A: character received (O if nothing)
+; Exit:  A: character received (0 if nothing)
 ;        BCDEHL preserved
 ;
 CINC	.equ	*
@@ -6995,7 +6996,7 @@ EFETCH	LDA	EFSW
 ;
 ; *********************************
 ; * CHECK IF UPPER CASE CHARACTER *
-; ********** **********************
+; *********************************
 ;
 ; Entry: A: Character to be checked
 ; Exit:  CY=0: Not upper case
@@ -7128,7 +7129,7 @@ DADM	PUSH	PSW
 ;
 ; *****************
 ; * DELAY ROUTINE *
-; ***** ***********
+; *****************
 ;
 ; RunS a fixed delay 1oop of 665 msec. If interrupts are enabled, the delay will be
 ; approx 730 msec.
@@ -7175,7 +7176,7 @@ MOVE	PUSH	PSW
 	MOV	E, L	; Save 1ength in DE
 	DAD	B	; Highest dest.addr. in HL
 	POP	B
-@DE5F	MOV	A, D	; Check 1f ready
+@DE5F	MOV	A, D	; Check if ready
 	ORA	E
 	JZ	@DE7A	; Then abort
 	DCX	D
@@ -7292,7 +7293,7 @@ HLMUL	STC
 ;
 .if ROMVERS == 11
 ; An additiornal entry is made for run NEW with returning the heapsize to its default value.
-; In BASIC V1.O, this entry was available on $CEC6.
+; In BASIC V1.0, this entry was available on $CEC6.
 ;  All jumps/calls to RNEW with other heapsizes are updated
 XDEB0	LXI	H, $0100
 	SHLD	HSIZE	; Set heap to default size
@@ -8187,7 +8188,7 @@ IFBNL	PUSH	PSW
 	JZ	@E2AA	; Then editbuf empty
 	INX	H
 	CPI	$0D	; Car.ret?
-	JNZ	@E298	; Get next char 1f not
+	JNZ	@E298	; Get next char if not
 ;
 ; If char is car.ret
 ;
@@ -8247,7 +8248,7 @@ RPRINT	LDAX	B	; Get 1erngth
 	CALL	PSTR	; Print string pntd by HL
 @E2E3	LDAX	B	; Get byte after string
 	INX	B
-	CPI	$FF	; End marker ?
+	CPI	$FF	; End marker?
 	JZ	@E2F6	; Then quit with car.ret
 	CPI	';'	; ';'?
 	CNZ	PSKP	; Cursor to next column if not (must be ',')
@@ -8345,7 +8346,7 @@ INPRS	LHLD	ERSSP	; Get saved stackpntr
 ;
 ; Stores data read from data statements or gotten from an input line on the correct location
 ;
-; Entry: E:  Offset next character to encode (#0291).
+; Entry: E:  Offset next character to encode ($0291).
 ;        HL: Startaddress data line.
 ;
 L0E56	CALL	LE436	; (not used)
@@ -8370,7 +8371,7 @@ LE370	CALL	RVAR	; Get varptr in HL
 	MOV	E, C	; Offset in E
 	POP	B
 	POP	H	; Get varptr
-	CPI	$20	; String type ?
+	CPI	$20	; String type?
 	MOV	A, E	; Offset in A
 .if ROMVERS == 11
 	CZ	LE4B8	; Only JZ E3A2 replaced by its contents
@@ -8526,7 +8527,7 @@ RREST	LHLD	TXTBGN	; Get startaddr. textbuf
 ;
 RRAND	PUSH	B
 	LXI	H, PORI	; Addr PORI
-	CALL	LD65F	; BC=0, E=0, #40 or #80
+	CALL	LD65F	; BC=0, E=0, $40 or $80
 	MVI	D, $01
 ;
 @E415	LDA	RNDLY	; Get RNDLY (0 by C72E)
@@ -8534,7 +8535,7 @@ RRAND	PUSH	B
 	RLC
 	RLC
 ;
-; Now CY is 0 if E=$40 and CY = bit 6 of FD00 (hardware random) if E=0 or E=#80.
+; Now CY is 0 if E=$40 and CY = bit 6 of FD00 (hardware random) if E=0 or E=$80.
 ;
 	MOV	A, D
 	RAL		; RAL D
@@ -8975,9 +8976,9 @@ RFILL	CALL	R2COC	; Eval coor dirnates, colour
 	ROMCALL(5, $24)	; Fill a rectangular area
 	JMP	LE5C8	; Evt run screen error
 ;
-; ***** ***************************
-; *EVALUATE 2 coORD INATESCOLOUR *
-; **********************************
+; *********************************
+; * EVALUATE 2 COORDINATES COLOUR *
+; *********************************
 ;
 R2COC	CALL	RCOOR	; Get 1st coordinate
 	XTHL		; X-coord on stack
@@ -9070,7 +9071,7 @@ R4COL	LXI	H, COLWK	; Startaddr SCOLT/SCOLG area
 RDIM	LDAX	B	; Get nr of items
 	INX	B
 LE631	ORA	A
-	RZ		; Abort 1f no items or ready
+	RZ		; Abort if no items or ready
 	DCR	A	; Item count
 	PUSH	PSW	; Preserve count
 	CALL	RARRN	; Get pnr to array in HL type in A
@@ -9527,7 +9528,7 @@ REXSR	CALL	REXPS	; Evaluate string exppr
 ;              else   Constant
 ; Exit:  BC updated
 ;        DEHL corrupted
-;        A: Type (#20)
+;        A: Type ($20)
 ;
 REXPS	LDAX	B	; get 1st byte
 	RLC
@@ -10824,7 +10825,7 @@ LEC6D	MOV	E, M
 ;              0 if value is zero
 ;             -1 if value is negative
 ;
-RSGN	CALL	FTEST	; Test 1f variable is zero
+RSGN	CALL	FTEST	; Test if variable is zero
 	RZ		; Then ready
 	LXI	H, FPM1B	; Addr FPT (-1)
 	ROMCALL(4, $0C)	; Copy -1 into MACC
@@ -10837,7 +10838,7 @@ RSGN	CALL	FTEST	; Test 1f variable is zero
 ; ***********************
 ;
 ; Entry: Variable in MACC.
-; Exit:  Z=l: Variable is zero.
+; Exit:  Z=1: Variable is zero.
 ;        Z=0: Other f1ags set on exponent byte of variable.
 ;        ABCDEHL preserved
 ;
@@ -10964,7 +10965,7 @@ SCOM	LDAX	B	; Get token
 	PCHL		; Go to this adress
 ;
 ; ***********************************
-; * POINTERS LIST HANDLING RDUTINES *
+; * POINTERS LIST HANDLING ROUTINES *
 ; ***********************************
 ;
 ; Table with addresses of listroutines for the part of a statement after a token.
@@ -11527,7 +11528,7 @@ LEF55	CALL_B(SCHRI, ')') 	; If ready: Print ')'
 ; Finds functionname in table with startaddress FUNTB and prints it.
 ; Eventual arguments are printed between brackets.
 ;
-; Entry: BC points to function code (#20)
+; Entry: BC points to function code ($20)
 ; Exit:  BC updated, AFEHL preserved, D=0.
 ;
 SFUN	INX	B
@@ -12575,7 +12576,7 @@ LE385	CALL	XPUT	; Copy ABCD into MACC
 ;
 	RET		; (not used)
 ;
-; ***** ******************************
+; ************************************
 ; * COPY MACC INTO REG. E, B, C, A   *
 ; * D = comp1. FPAC EXOR hibyte MEM *
 ; ************************************
@@ -12728,7 +12729,7 @@ XFLT	PUSH	PSW
 	MVI	H, $20	; Init exp. byte for pos. nr
 	MOV	A, B
 	ORA	A	; Check sign bit
-	JP	@E3FD	; Jump 1f nr is positive
+	JP	@E3FD	; Jump if nr is positive
 ;
 ; If INT nr is negative
 ;
@@ -13841,7 +13842,7 @@ XATAN	PUSH	PSW
 ; Calculate k
 ;
 	CPI	$40
-	JC	@E8D3	; Jump if exp < #40
+	JC	@E8D3	; Jump if exp < $40
 	CPI	$7F
 	MVI	A, $01
 	JZ	@E8E6	; k=1 if exp=$7F
@@ -14196,7 +14197,7 @@ LEA74	MVI	A, $7F	; Most possible value
 	MOV	A, M	; Get exp MACC
 	XRA	E	; XOR with exp MEM
 	ANI	$80	; Sign only
-	STA	SUBF	; Store $80 1f different signs
+	STA	SUBF	; Store $80 if different signs
 	CALL	TSTZ	; Test if MACC=0; exp in A
 	JZ	LEB11	; Jump if true
 	PUSH	D
@@ -15122,7 +15123,7 @@ XFSUB	PUSH	PSW
 ;
 	.byte	$FF, $FF
 ;
-; ***************^* *********************
+; ***************************************
 ; * SAVEA: PREPARE SAVING STRING ARRAYS *
 ; ***************************************
 ;
@@ -16063,7 +16064,7 @@ TMODE	PUSH	PSW
 @E231	POP	PSW
 	RET
 ;
-; If no space for A-mode or mode O
+; If no space for A-mode or mode 0
 ;
 @E233	LHLD	AESTOP	; Get addr emergency stop routine
 	PCHL		; Go to this routine
@@ -16174,11 +16175,11 @@ SCURS	ORA	A
 	MVI	B, 24	; Nr of lines in mode
 	LDA	SMODE	; Get current screen mode
 	ORA	A
-	JM	LE295	; Jump if mode 0
+	JM	@LE295	; Jump if mode 0
 	MVI	B, 4	; Nr of lines in A-modes
 	RAR
 	JNC	LE2C5	; Error if all-graphics mode
-LE295	MOV	A, H	; Y-coord in A
+@LE295	MOV	A, H	; Y-coord in A
 	CMP	B	; More than max value
 	JNC	LE2C5	; Then request off streen
 	CALL	CURDEL	; Delete old cursor
@@ -16187,7 +16188,7 @@ LE295	MOV	A, H	; Y-coord in A
 	CALL	HLMUL_	; Calc 1ength reqd number af lines (HL=A*HL)
 	XCHG		; in DE
 	LHLD	GAE	; Store end archive area
-	DAD	D	; Start of regd linee
+	DAD	D	; Start of reqd linee
 	CALL	SSETL	; Store addr line mode byte current line and store last byte on that line
 	LXI	D, $0008
 	CALL	SUBDE_	; HL = start of right border
@@ -17431,7 +17432,7 @@ UPDTP	PUSH	PSW
 	CALL	HLMUL_	; Calc total length in HL
 	LDA	DIRN1	; Get Y-direction
 	ORA	A	; Test if up or down
-	CNZ	CMPHL_	; 1f down: calc 2-compl of HL
+	CNZ	CMPHL_	; If down: calc 2-compl of HL
 	POP	D
 	DAD	D	; Update pntr
 	CALL	PTRCK	; Into or out archive area
@@ -18009,7 +18010,7 @@ FILST	PUSH	B
 	LHLD	FCOLR	; Get details for col our reqd
 	LDA	ANIM	; Get animate flag
 	ORA	A
-	JNZ	@EA91	; Jump 1f set
+	JNZ	@EA91	; Jump if set
 	MOV	A, B	; Mask for bits to be update
 	ANA	H
 	MOV	C, A
@@ -18073,7 +18074,7 @@ FILST	PUSH	B
 	CALL	DADCK	; Next line
 	JMP	@EAAD	; Next field
 ;
-; 1f ready
+; If ready
 ;
 @EABC	POP	H
 @EABD	POP	H
@@ -18395,15 +18396,15 @@ EINIT	MVI	A, $FF	; Init mode 0
 ; *************
 ;
 ; A given character is inserted in the buffer, except:
-;   #08 deletes a character
-;   #10 moves cursor up
-;   #11 moves cursor down
-;   #12 moves cursor left
-;   #13 moves cursor right
-;   #14 moves window up
-;   #15 moves window down
-;   #16 moves window left
-;   #17 moves window right
+;   $08 deletes a character
+;   $10 moves cursor up
+;   $11 moves cursor down
+;   $12 moves cursor left
+;   $13 moves cursor right
+;   $14 moves window up
+;   $15 moves window down
+;   $16 moves window left
+;   $17 moves window right
 ;
 ; Entry: A: character given
 ; Exit:  CY=1: if done
@@ -18479,7 +18480,7 @@ LEC74	PUSH	B
 ;
 ; Moves window up or left.
 ;
-; Entry: BC: Offset (#86 for 1 line, #02 for 1 position)
+; Entry: BC: Offset ($86 for 1 line, $02 for 1 position)
 ; Exit:  all registers corrupted
 ;
 LEC86	LHLD	CHE	; Get addr after end char area
@@ -19305,7 +19306,7 @@ INXCH	INX	H	; Incr pointer
 ; the mask in D. Else the code ($80 + 1ow order 6 bits from code in table) are stored in EBUF.
 ;
 ; Entry: HL: 1st free position in EBUF
-;        D:  mask for direct command (#80) or program input (#40)
+;        D:  mask for direct command ($80) or program input ($40)
 ;        C:  position on current line
 ; Exit:  HL: updated
 ;        C:  points to 1st not used input in line
@@ -19398,7 +19399,7 @@ LE088	BAS_ENC("TO", LE06F, 0, ERRSN)	; TO not found: run SYNTAX ERROR
 LE090	BAS_ENC("STEP", LE07B, 0, LE082)	; STEP not found: end command
 ;
 ; *************************************************
-; * GET ADDRESS ENCODING INSTRUCTION AND G0 TO IT *
+; * GET ADDRESS ENCODING INSTRUCTION AND GO TO IT *
 ; *************************************************
 ;
 ; Entry: DE: points to table of format:
@@ -19808,7 +19809,7 @@ LE26F	DCX	H
 	INX	H
 LE272	CALL	ENC_ICI	; Encode <INT expr>, <INT expr>
 	MVI	M, $FF	; $FF into EBUF
-	CALL	INXCH	; UpdatE EBUF pointer
+	CALL	INXCH	; Update EBUF pointer
 	CALL	IGNB	; Get char from line, neglect tab + space
 	CPI	','	; ','?
 	RNZ		; Ready if not
@@ -20083,7 +20084,7 @@ LE36D	PUSH	D
 ; ************************************************
 ;
 LE376	PUSH	D
-	LXI	D, $0210	; Set D for evt conversion and E=#10 (INT Var type)
+	LXI	D, $0210	; Set D for evt conversion and E=$10 (INT Var type)
 	MVI	B, $00	; Reqd type is FPT
 LE37C	PUSH	PSW
 	MOV	A, B
@@ -20093,7 +20094,7 @@ LE37C	PUSH	PSW
 	CALL	LE3C9_	; Encode expr
 	POP	D
 	LDA	TYPE	; Get type latest expression
-	CMP	B	; Was it as regd?
+	CMP	B	; Was it as reqd?
 	JZ	@E398	; Then ready
 ;
 ; Type not as expected
@@ -20131,7 +20132,7 @@ LE3A1	MVI	B, $20	; Var type is $20
 LE3A3	PUSH	D
 	PUSH	PSW
 	CALL	LE3C9_	; Encode expr
-	LDA	TYPE	; Get type 1atest expression
+	LDA	TYPE	; Get type latest expression
 	CMP	B	; Compare with reqd type
 	JNZ	ERRTM	; Run error 'TYPE MISMATCH' if not identical
 	JMP	LE399	; Quit
@@ -20153,7 +20154,7 @@ EEXPI	PUSH	H
 	XRA	A
 	STA	REQTYP	; Req. number type is $00
 	CALL	LE3C9_	; Encode expr
-	LDA	TYPE	; Get type 1atest expression
+	LDA	TYPE	; Get type latest expression
 	CPI	$30	; Boolean?
 	JZ	ERRTM	; Then run error 'TYPE MISMATCH'
 	XTHL		; Get old EBUF pntr
@@ -20225,7 +20226,7 @@ LE3F1	CALL	LE6F6	; Find unitary operator in table
 LE3F8	SHLD	HOPPT	; Set pntr place for operator
 	CALL	LE455	; Encode 1st operand
 LE3FE	CALL	LE6EA	; Find binary or unitary operator in tabie
-	STA	RGTOP	; Store 1atest prio operator
+	STA	RGTOP	; Store latest prio operator
 @E404	LDA	RGTOP	; Get latest prio operator
 	ANI	$E0	; Prio in bits 5, 6, 7
 	MOV	D, A	; RGTOP in D
@@ -20245,7 +20246,7 @@ LE3FE	CALL	LE6EA	; Find binary or unitary operator in tabie
 	LHLD	HOPPT	; Get pntr place for operator
 	PUSH	H	; Preserve HOPPT
 	XCHG		; New EBUF pntr in HL
-	LDA	RGTOP	; Get 1atest prio operator
+	LDA	RGTOP	; Get latest prio operator
 	STA	OLDOP	; and store it as old one
 	CALL	LE3F8	; Encode right hand operand until higher prio operators
 	XCHG
@@ -20268,7 +20269,7 @@ LE3FE	CALL	LE6EA	; Find binary or unitary operator in tabie
 LE444	SHLD	HOPPT	; Set pntr place for operator
 	PUSH	H
 	CALL	LE455	; Encode a term
-	CALL	LE797	; Entode unitary operator for a term
+	CALL	LE797	; Encode unitary operator for a term
 	POP	D
 	CALL	LE783	; Byte in A into EBUF
 	JMP	LE3FE	; Encode sequence with prio's
@@ -20284,7 +20285,7 @@ LE455	PUSH	PSW
 	JZ	@E49B	; Jump if char is '"'
 	CPI	'('
 	JZ	@E486	; Jump if char is '('
-	CALL	ALPHA	; Check if char is upper Case
+	CALL	ALPHA	; Check if char is uppercase
 	JC	@E477	; Then jump
 	CPI	'-'
 	JZ	ERRSN	; Run 'SYNTAX ERROR' if '-'
@@ -20298,7 +20299,7 @@ LE455	PUSH	PSW
 	JC	@E4A4	; If ready: store type ($30) and quit
 	MOV	C, B
 	MVI	D, $00
-	CALL	LE5BC	; Encode var/array referente
+	CALL	LE5BC	; Encode var/array reference
 	JMP	@E4A7	; Quit
 ;
 ; If opening bracket
@@ -20372,7 +20373,7 @@ ENUM	PUSH	B
 ;
 ; If INT
 ;
-	MVI	M, $14	; Load #14 in EBUF
+	MVI	M, $14	; Load $14 in EBUF
 	CALL	INXCH	; Update EBUF pointer
 	CALL	EINT	; INT nr into EBUF
 	JNC	LE4FF	; Then handle as FPT
@@ -20549,8 +20550,8 @@ LE5BB	RET
 ; * ENCODE VARIABLE OR ARRAY REFERENCE *
 ; **************************************
 ;
-; L3E85: Reference to a variable or an array with arguments.
-; L3EB6: Reference to an array without arguments.
+; LE5BC: Reference to a variable or an array with arguments.
+; LE5BE: Reference to an array without arguments.
 ;
 ; Entry: D : Code: 00: reference to a value (array with arguments or variable)
 ;                  FF: array name without arguments
@@ -20592,7 +20593,7 @@ LE5BE	PUSH	PSW
 	INR	C	; Points to next char in input
 	MVI	E, $02	; 2 bytes in symtab for STR
 	MVI	H, $20	; String type byte
-	CPI	$24
+	CPI	'$'
 	JZ	@E60E	; Jump if STR ('$')
 	MVI	E, $04	; 4 byte in symtab for INT/FPT
 	MVI	H, $10	; INT type byte
@@ -20605,7 +20606,7 @@ LE5BE	PUSH	PSW
 ; If no type marker given
 ;
 	POP	PSW	; Get 1st byte var.name
-	LXI	H, IMPTAB-$41	; Baseaddr IMPTAB
+	LXI	H, IMPTAB-'A'	; Baseaddr IMPTAB
 	CALL	DADA	; Calc offset addr in HL
 	MOV	H, M	; Get type marker in H
 	DCR	C
@@ -20827,7 +20828,7 @@ LE6E3	DCR	E
 ; * FIND BINARY OR UNITARY OPERATOR IN TABLE *
 ; ********************************************
 ;
-; Entry/exit: See #3E6F6.
+; Entry/exit: See $3E6F6.
 ;
 LE6EA	PUSH	H
 	LXI	H, OPTAB	; Startaddr table
@@ -20865,7 +20866,7 @@ LE6F6	PUSH	H
 ; Checks if 1st character is a upper case one.
 ; Reads the input (starting with character after C) till it finds a non-alphanumeric character
 ; (number or upper case). On a carry CALL, it also accepts %, ! or $ at the end.
-; Blanks are not ignored and nat accepted.
+; Blanks are not ignored and not accepted.
 ;
 ; Entry: C : input positicon
 ; Exit:  B : entry C
@@ -20950,7 +20951,7 @@ LE731	CALL	IGNB	; Get char from line, neg1ect tab + space
 ;
 @E751	POP	B
 	MVI	A, $15
-	JMP	ERROR	; Run error 'NUMBER DUT OF RANGE'
+	JMP	ERROR	; Run error 'NUMBER OUT OF RANGE'
 ;
 ; *************************************
 ; * ENCODE BINARY OPERATION INTO EBUF *
@@ -21004,7 +21005,7 @@ LE770	PUSH	PSW
 ;
 ; Entry: A:  byte to be inserted.
 ;        DE: startaddress source bank
-;        HL: endaddress source bank +1
+;        HL: endaddress source bank + 1
 ; Exit:  HL = HL + 1
 ;        ABCDE preserved
 ;
@@ -21122,7 +21123,7 @@ LE7E5	MOV	A, D	; Get opcode group (0-5)
 	JZ	ERRTM	; Then run error 'TYPE MISMATCH'
 	DCR	A
 	ANI	$30	; Get type of result only
-	STA	TYPE	; Store type 1atest expression
+	STA	TYPE	; Store type latest expression
 	POP	D	; Get code for binary operation in D
 	MOV	E, M	; Get resultcode from table in E and in A
 	MOV	A, M
@@ -21207,7 +21208,7 @@ LE835	.equ	*
 ;
 ; Get character from line and checks if it is a correct terminator (':' or car. ret).
 ;
-; Exit: Z=l: correct terminator
+; Exit: Z=1: correct terminator
 ;       Z=0: incorrect
 ;       BCDEHL preserved, A corrupted
 ;
@@ -21223,7 +21224,7 @@ TSEOC	CALL	IGNB	; Get char from line, neglect tab + space
 ;
 ; Exit: C updated, AF corrupted, BDEHL preserved
 ;
-LE862	CALL_B(ECHRI, ',')	; Check 1f next char is ','
+LE862	CALL_B(ECHRI, ',')	; Check if next char is ','
 	RET
 ;
 ; ************************
@@ -21324,7 +21325,7 @@ LE8AB	INR	E
 ;
 ; Gets also next character to encode.
 ;
-LE8AF	MVI	M, $14	; INT coe ($14) in EBUF
+LE8AF	MVI	M, $14	; INT code ($14) in EBUF
 	CALL	INXCH	; Update EBUF pointer
 	JMP	IGNB	; Get char from line, neglect tab + space
 ;
@@ -21456,7 +21457,7 @@ INKEY	PUSH	PSW
 ; If this procedure finds a free area min. 2 bytes 1arger than requested, then it is reserved
 ; by setting the 1ength bytes (msb=0). An evt. resting free area is set with 1ength bytes and
 ; msb=1 (this area must be >= 2 bytes).
-; The heap contents is never moved to obtain one large conso1idated area of free bytes!!
+; The heap contents is never moved to obtain one large consolidated area of free bytes!!
 ;
 ; Entry: DE: Length requested heap space.
 ; Exit:  AFBCDE preserved
@@ -21484,7 +21485,7 @@ LE9A4	MOV	D, M	; Contents 1st 2 bytes of heap in DE (1ength)
 	DAD	D	; Begin next area in HL
 	MOV	A, M
 	ORA	A	; Check msb of this area
-	JP	@E9C7	; Jump 1f area occupied
+	JP	@E9C7	; Jump if area occupied
 	INX	H
 	MOV	A, E
 	ADD	M	; Add 1obyte length next area length previous area
@@ -21789,7 +21790,7 @@ ASHEX	SUI	'0'
 	JC	@EB24	; OK if number 0-9
 	SUI	7
 	CPI	10
-	RC		; Error if #3A-$3F
+	RC		; Error if $3A-$3F
 	CPI	$10
 @EB24	CMC		; OK if 0-9, A-F
 	RET
@@ -21907,7 +21908,7 @@ LEB5D	PUSH	PSW
 	CMP	B
 	JZ	@EBAE	; Then jump
 	MOV	A, M	; Get instr code
-	ANA	B	; Check if it is a conditional1 CALL
+	ANA	B	; Check if it is a conditional CALL
 	CPI	$C4
 	JNZ	LEBB0	; Jump if not
 @EBAC	INX	H
@@ -21970,7 +21971,7 @@ LEBEE	DI
 	MOV	A, M	; Get inst code
 	XCHG		; HL = UTWK4
 	MVI	M, $FB	; Load EI in UTWK4
-	MVI	C, $03	; 3 instr bytes to be 1oaded into #004D-F
+	MVI	C, $03	; 3 instr bytes to be 1oaded into $004D-F
 	JZ	LEC2C	; Jump if instr is EI/DI
 ;
 ; Load next instruction starting form UTWK4 + 1
@@ -22006,7 +22007,7 @@ LEC1A	INX	H
 ;
 LEC2C	STA	UTWK1	; Store EI/DI instr
 	XRA	A
-	JMP	LEC1A	; Load $00 in #004D, next instr in 004E-0050
+	JMP	LEC1A	; Load $00 in $004D, next instr in 004E-0050
 ;
 ; If a RST instruction
 ;
@@ -22175,7 +22176,7 @@ MOVEK	MVI	C, $03	; Nr of addr allowed
 ; Z2: Sets: current interrupt mask (TICIM) = $C5
 ;           TICC control word (TICC_CW) = $FC
 ;           GIC  control word (GIC_CW) = $1B
-;     Initialises interrupt vector area #0062-#0071.
+;     Initialises interrupt vector area $0062-$0071.
 ;     Sets interrupt vector RST 0 o to $EB5D.
 ;
 ; Z3: Z1 + Z2
@@ -22270,7 +22271,7 @@ CIE	CALL	LEEB8	; Scan keyboard
 ; Exit:  AFC corrupted, BDEHL preserved
 ;
 LADDR	MOV	A, H	; Hibyte in A
-	CALL	LBYTE	; Print both nibbies in ASCIII
+	CALL	LBYTE	; Print both nibbies in ASCII
 	MOV	A, L	; Lobyte in A
 LBYTE	PUSH	PSW	; Preserve hex value 2 char
 	RLC		; Move hinibble into 1onibble
@@ -22401,8 +22402,8 @@ INXCK	INX	H
 ; **********
 ;
 ; Reads one field if given.
-; If no field given: Restores CéU registers, goes to PC address. Returnaddress is $EA42 (into command 1oop).
-; 1f field given: Saves it as PC, initialises TICC and GIC. Returnaddress is $EA04. Goes to the given address.
+; If no field given: Restores CPU registers, goes to PC address. Returnaddress is $EA42 (into command 1oop).
+; If field given: Saves it as PC, initialises TICC and GIC. Returnaddress is $EA04. Goes to the given address.
 ; REMARK: The stackpointer is never restored!
 ;
 GOK	MVI	C, $01
@@ -22563,7 +22564,7 @@ LEE09	MOV	B, A	; Last input in B
 	POP	PSW	; Retrieve symbol
 	CALL	LEE6A	; Exchange mem.contents, go to next one
 	JC	@EE37	; Jump if 'ESC'
-	XTHL		; HL: addr symbo1, stack: next mem. area
+	XTHL		; HL: addr symbol, stack: next mem. area
 	INX	H	; addr next symbol
 	MOV	A, M	; Get symbol
 	ORA	A	; Set f1ags
@@ -22626,7 +22627,7 @@ LEE44_3	PUSH	D	; Save startaddr mem area
 ;
 ; Entry: HL: memory address.
 ;        A:  symbol
-LEE6A	ORA	A	; Set flags on symbo1
+LEE6A	ORA	A	; Set flags on symbol
 	PUSH	PSW	; and save it
 	MVI	C, '-'
 	CALL	LEEB4	; Print '-'

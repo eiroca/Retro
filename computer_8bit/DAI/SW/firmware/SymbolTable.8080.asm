@@ -1511,7 +1511,6 @@ SCOLT    = $E237
 VCOPY    = $E254
 BCOLS    = $E267
 SCURS    = $E279
-LE295    = $E295
 LE2C1    = $E2C1
 LE2C5    = $E2C5
 SCURA    = $E2CC
