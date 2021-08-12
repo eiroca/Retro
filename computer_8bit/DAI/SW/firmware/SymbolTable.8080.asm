@@ -307,12 +307,13 @@ TIC_T5   = $FFFD
 UTIAD    = $FFF9
 SNDIAD   = $FFFB
 KEIAD    = $FFFC
-
-; Segment: ROM0
-BGN_ROM0 = $C000
+;
+; Segment: ROM
+;
+BGN_ROM  = $C000
 BASE     = $C000
 XINIT    = $C003
-XEINM    = $C006
+XFINM    = $C006
 XFDCM    = $C009
 XFCOMP   = $C00C
 XIINM    = $C00F
@@ -943,6 +944,11 @@ RPEN     = $DFC3
 ROUT     = $DFC9
 RWAIT    = $DFD5
 RWTEM    = $DFF7
+END_ROM  = $E000
+;
+; Segment: ROM0
+;
+BGN_ROM0 = $E000
 LE012    = $E012
 RWTET    = $E016
 RFOR     = $E02B
@@ -1182,10 +1188,6 @@ SCN28    = $EE87
 LEE8D    = $EE8D
 LEE94    = $EE94
 SCEXP    = $EEA2
-LEEDF    = $EEDF
-LEEE8    = $EEE8
-LEEED    = $EEED
-LEEF2    = $EEF2
 SCARN    = $EEF7
 LEEFC    = $EEFC
 LEEFE    = $EEFE
@@ -1203,9 +1205,10 @@ SUQTS    = $EFED
 SCHRI    = $EFF5
 SEXPS    = $EFFC
 END_ROM0 = $F000
-
+;
 ; Segment: ROM1
-bgn_rom1 = $e000
+;
+BGN_ROM1 = $E000
 SVECA    = $E000
 MFADD    = $E000
 MFSUB    = $E003
@@ -1464,8 +1467,9 @@ R1BB     = $EFB5
 XEFC9    = $EFC9
 LEFF9    = $EFF9
 END_ROM1 = $F000
-
+;
 ; Segment: ROM2
+;
 BGN_ROM2 = $E000
 ZSINIT   = $E000
 ZSOUTC   = $E003
@@ -1514,8 +1518,6 @@ SCURS    = $E279
 LE2C1    = $E2C1
 LE2C5    = $E2C5
 SCURA    = $E2CC
-LE311    = $E311
-LE313    = $E313
 SCURM    = $E316
 LE32A    = $E32A
 CURSET   = $E330
@@ -1523,7 +1525,6 @@ SCURI    = $E344
 CURFL    = $E344
 CURDEL   = $E36B
 SFETC    = $E38B
-LE3B2    = $E3B2
 SSETM    = $E3D9
 SSM0     = $E407
 LE438    = $E438
@@ -1628,8 +1629,9 @@ LEF9C    = $EF9C
 LEFB9    = $EFB9
 EDLCH    = $EFCC
 END_ROM2 = $F000
-
+;
 ; Segment: ROM3
+;
 BGN_ROM3 = $E000
 ELINE    = $E000
 ELN      = $E003
@@ -1751,7 +1753,6 @@ EINT     = $E57B
 LE590    = $E590
 EFPT     = $E596
 LE5A3    = $E5A3
-LE5BB    = $E5BB
 LE5BC    = $E5BC
 LE5BE    = $E5BE
 LE653    = $E653
