@@ -20225,7 +20225,7 @@ LE3F1	CALL	LE6F6	; Find unitary operator in table
 ;
 LE3F8	SHLD	HOPPT	; Set pointer place for operator
 	CALL	LE455	; Encode first operand
-LE3FE	CALL	LE6EA	; Find binary or unitary operator in tabie
+LE3FE	CALL	LE6EA	; Find binary or unitary operator in table
 	STA	RGTOP	; Store latest priority operator
 @E404	LDA	RGTOP	; Get latest priority operator
 	ANI	$E0	; Priority in bits 5, 6, 7
@@ -20257,7 +20257,7 @@ LE3FE	CALL	LE6EA	; Find binary or unitary operator in tabie
 	POP	PSW
 	STA	OLDOP	; Restore OLDOP
 	XCHG		; New EBUF pointer in HL
-	POP	D	; Restore type left operand (E) and orig RGTOP (D)
+	POP	D	; Restore type left operand (E) and original RGTOP (D)
 	MOV	A, D	; Old RGTOP in A
 	ANI	$1F	; Opcode only
 	CALL	LE7CF	; Obtain type info for binary operation
@@ -20332,7 +20332,7 @@ LE455	PUSH	PSW
 ; ***************************
 ;
 ELODA	.equ	*
-ESAVA	CALL	EARRN	; Enc. array without arguments
+ESAVA	CALL	EARRN	; Encode array without arguments
 	JMP	ELOAD	; Into encode 'SAVE/LOAD'
 ;
 	.byte	$FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
@@ -20935,7 +20935,7 @@ LE731	CALL	IGNB	; Get char from line, neglect TAB and space
 	PUSH	B
 	ROMCALL(4, $15)	; Copy MACC into reg ABCD
 	ORA	B
-	JNZ	@E751	; Error exit it > $FFFF
+	JNZ	@E751	; Error exit if > $FFFF
 	ORA	C
 	ORA	D
 	JZ	@E751	; Error exit if number = 0
