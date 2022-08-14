@@ -66,7 +66,7 @@ MINIT	SHLD	AGETC	; Init (AGETC) = EFETCH@$DDE0
 	RET
 ;
 ; **************************
-; * OVERFLOW ERRDR ROUTINE *
+; * OVERFLOW ERROR ROUTINE *
 ; **************************
 ;
 ; (From LC04F common part for various entries).
@@ -3120,7 +3120,7 @@ LCE8B	PUSH	D
 ; * part of C6BA *
 ; ****************
 LCE91	PUSH	H
-	JMP	LE92D	; (2) Now set up screen bits for mode 1
+	JMP	SBFM	; (2) Now set up screen bits for mode 1
 ;
 ; **************
 ; * (not used) *
@@ -3823,7 +3823,7 @@ LD1E2	CALL	ASKKEY	; Check if new keys pressed
 	JMP	LD6C1	; Into keyboard scanning
 ;
 ; *******************************
-; * part af FPT COMPARE (LC079) *
+; * part of FPT COMPARE (LC079) *
 ; *******************************
 ;
 ; Entry: Contents MACC in ABCD, exponent byte in E
@@ -4780,8 +4780,7 @@ WTRLX	PUSH	B
 ;
 ; Part of Input Text Line
 ;
-XD55A
-	STA	OTSW	; Output to screen
+XD55A	STA	OTSW	; Output to screen
 	JMP	LDD49	; Ignore line if break pressed
 .endif
 .if ROMVERS == 10
@@ -7046,7 +7045,7 @@ COMP	MOV	A, H
 	CMP	E
 	RET
 ; *****************************
-; * CALCULATE LENGTH OF BLDCK *
+; * CALCULATE LENGTH OF BLOCK *
 ; *****************************
 ;
 ; Sets HL=HL-DE.
@@ -8256,7 +8255,7 @@ RPRINT	LDAX	B	; Get length
 	DCR	D	; Update expression count
 	JNZ	@E2BA	; Loop if more expressions
 	ORA	A	; No special action
-		RET
+	RET
 ;
 ; If end of print statement
 ;
@@ -8342,7 +8341,7 @@ INPRS	LHLD	ERSSP	; Get saved stackpntr
 ; * STORE DATA IN CORRECT LOCATION *
 ; **********************************
 ;
-; EntrY L0E56 not used.
+; Entry L0E56 not used.
 ;
 ; Stores data read from data statements or gotten from an input line on the correct location
 ;
@@ -11342,7 +11341,7 @@ SCN28	CALL	SCEXP	; List <expression>
 ; Default DINC is RS232.
 ;
 ;             INSW:     OTSW:
-;        A=0: keyboard  sereen/RS232
+;        A=0: keyboard  Screen/RS232
 ;        A=1: DINC      Screen
 ;        A=2: DINC      editbuffer
 ;        A=3: DINC      DOUTC
@@ -16796,7 +16795,7 @@ VARS	STC
 LE596	POP	H
 	JMP	XRET	; Pop all (CY=1) return
 ;
-; VECTDRS TO TABLES SCREEN PARAMETERS
+; VECTORS TO TABLES SCREEN PARAMETERS
 ;
 ; The start addresses of the tables with parameters for the graphic modes are given.
 ;
