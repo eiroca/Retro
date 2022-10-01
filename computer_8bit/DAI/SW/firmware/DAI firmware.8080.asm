@@ -1716,7 +1716,7 @@ UTRST	POP	H
 ; address lines to $C000.
 ;
 ; This section is responsible for all 'once only' initialisation of the hardware and
-; the sottware environment. It initialises pointers to all RAM areas required, the
+; the software environment. It initialises pointers to all RAM areas required, the
 ; interrupt system and the software modules.
 ;
 INIT	.equ	*

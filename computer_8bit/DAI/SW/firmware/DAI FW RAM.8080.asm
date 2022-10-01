@@ -287,7 +287,7 @@ OTSW	.EQU	$0131	; BW Output switch
 ; Encoding input source switching
 ;
 EFEPT	.EQU	$0132	; W Encoding input pointer. Points to start addres of Basic-1ine just being encoded
-EFECT	.EQU	$0134	; B Encded input count. CoLunts 1ength of 1ine
+EFECT	.EQU	$0134	; B Encoded input count. Counts 1ength of 1ine
 EFSW	.EQU	$0135	; B Encoded input switching:
 			;    $00 Input from keyboard/DINC.
 			;    $01 Input from string	
